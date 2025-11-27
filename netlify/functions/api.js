@@ -73,25 +73,24 @@ function zipFallback(line) {
 }
 
 async function parseAddressWithLLM(addressLine) {
-  if (!openai) throw new Error('LLM disabled');
-  const resp = await openai.chat.completions.create({
-    model: OPENAI_MODEL,
-    messages: [
-      {
-        role: 'system',
-        content: 'You parse US addresses into JSON. Return ONLY valid JSON with these fields: number (street number), prefix (N/S/E/W), name (street name), type (St/Ave/Blvd/etc), suffix (NE/SW/etc), city, state (2-letter), postal (ZIP code). Use empty strings for missing fields.'
-      },
-      {
-        role: 'user',
-        content: addressLine
-      }
-    ],
-    response_format: { type: 'json_object' },
-    temperature: 0
-  });
-  const text = resp.choices?.[0]?.message?.content || '';
-  if (!text) throw new Error('Empty LLM response');
-  return extractJSON(text);
+    if (!openai) throw new Error('LLM disabled');
+    const resp = await openai.chat.completions.create({
+        model: OPENAI_MODEL,
+        messages: [
+            {
+                role: 'system',
+                content: 'You parse US addresses into JSON. Return ONLY valid JSON with these fields: number (street number), prefix (N/S/E/W), name (street name), type (St/Ave/Blvd/etc), suffix (NE/SW/etc), city, state (2-letter), postal (ZIP code). Use empty strings for missing fields.'
+            },
+            {
+                role: 'user',
+                content: addressLine
+            }
+        ],
+    response_format: { type: 'json_object' }
+    });
+    const text = resp.choices?.[0]?.message?.content || '';
+    if (!text) throw new Error('Empty LLM response');
+    return extractJSON(text);
 }
 
 async function cityStateFromZIP(ZIPCode, bearer) {

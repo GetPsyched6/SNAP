@@ -92,8 +92,7 @@ async function parseAddressWithLLM(addressLine) {
         content: addressLine
       }
     ],
-    response_format: { type: 'json_object' },
-    temperature: 0
+    response_format: { type: 'json_object' }
   });
   const text = resp.choices?.[0]?.message?.content || '';
   if (!text) throw new Error('Empty LLM response');

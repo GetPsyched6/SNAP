@@ -485,23 +485,158 @@ body {
 	opacity: 0.7;
 }
 
-/* Responsive */
-@media (max-width: 600px) {
+/* Responsive - Tablet */
+@media (max-width: 768px) {
 	.app-shell {
-		margin: 40px auto;
+		margin: 50px auto;
+		padding: 0 16px;
 	}
 
 	.app-header h1 {
-		font-size: 26px;
+		font-size: 28px;
+	}
+
+	.card {
+		padding: 18px;
+		border-radius: 14px;
+	}
+
+	.results-head {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 6px;
+	}
+
+	.results-head p,
+	.results-head small {
+		font-size: 12px;
+	}
+}
+
+/* Responsive - Mobile */
+@media (max-width: 480px) {
+	.app-shell {
+		margin: 20px auto;
+		padding: 0 12px;
+	}
+
+	.app-header {
+		margin-bottom: 20px;
+		padding-top: 50px; /* Space for theme toggle */
+	}
+
+	.app-header h1 {
+		font-size: 22px;
+		line-height: 1.3;
+	}
+
+	.subtitle {
+		font-size: 13px;
 	}
 
 	.theme-toggle {
-		top: 12px;
-		right: 12px;
+		top: 10px;
+		right: 10px;
 		padding: 8px 12px;
 	}
 
 	.theme-toggle-label {
 		display: none;
+	}
+
+	.card {
+		padding: 14px;
+		border-radius: 12px;
+		margin-bottom: 14px;
+	}
+
+	.textarea {
+		min-height: 8em;
+		padding: 12px;
+		font-size: 14px;
+		border-radius: 10px;
+	}
+
+	.actions {
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.btn {
+		width: 100%;
+		padding: 14px 20px;
+		font-size: 15px;
+		text-align: center;
+	}
+
+	.line-row {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 10px;
+	}
+
+	.addr {
+		font-size: 14px;
+	}
+
+	.spacer {
+		display: none;
+	}
+
+	.line-row .btn.go {
+		width: 100%;
+	}
+
+	.card-line {
+		padding: 12px;
+	}
+
+	.usps-slab {
+		padding: 10px 12px;
+		font-size: 11px;
+		border-radius: 10px;
+		overflow-x: auto;
+	}
+
+	.usps-result {
+		line-height: 1.5;
+	}
+
+	.usps-meta {
+		display: block;
+		margin-top: 6px;
+		font-size: 10px;
+	}
+
+	/* Retry form mobile */
+	.retry-fields {
+		grid-template-columns: 1fr 1fr;
+		gap: 8px;
+	}
+
+	.retry-field-wide {
+		grid-column: span 2;
+	}
+
+	.retry-field input {
+		padding: 10px;
+		font-size: 14px;
+	}
+
+	.retry-btn {
+		width: 100%;
+		padding: 12px 20px;
+		font-size: 14px;
+	}
+
+	.error-header {
+		font-size: 12px;
+		word-break: break-word;
+	}
+
+	/* Footer */
+	.app-footer {
+		margin-top: 20px;
+		font-size: 12px;
 	}
 }
