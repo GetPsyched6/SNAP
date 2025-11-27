@@ -76,25 +76,49 @@
 
     function setUSPSState(el, state) {
         if (!el) return;
-        el.classList.remove('ok', 'err');
+        el.classList.remove('ok', 'err', 'loading');
         if (state) el.classList.add(state);
+    }
+
+    function showLoadingState(el, message) {
+        el.innerHTML = `
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <span class="loading-text">${escapeHTML(message)}</span>
+            </div>
+        `;
+        setUSPSState(el, 'loading');
     }
 
     // Auto-detect API base: use local server in development, Netlify functions in production
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const API_BASE = isLocalhost ? 'http://localhost:5501/api' : '/api';
 
-    async function uspsStandardizeLine(addressLine) {
-        const r = await fetch(`${API_BASE}/usps/standardize-line`, {
+    async function uspsStandardizeLine(addressLine, onProgress) {
+        // Show AI parsing stage
+        if (onProgress) onProgress('Parsing address with AI...');
+        
+        const fetchPromise = fetch(`${API_BASE}/usps/standardize-line`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ addressLine })
         });
+
+        // After 800ms, update to USPS stage (the API does both, but this gives visual feedback)
+        const uspsStageTimeout = setTimeout(() => {
+            if (onProgress) onProgress('Validating with USPS API...');
+        }, 800);
+
+        const r = await fetchPromise;
+        clearTimeout(uspsStageTimeout);
+        
         const text = await r.text();
         return JSON.parse(text);
     }
 
-    async function uspsRetry(fields) {
+    async function uspsRetry(fields, onProgress) {
+        if (onProgress) onProgress('Retrying USPS validation...');
+        
         const r = await fetch(`${API_BASE}/usps/retry`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -246,7 +270,9 @@
             retryBtn.textContent = "Retrying...";
 
             try {
-                const data = await uspsRetry(fields);
+                const data = await uspsRetry(fields, (msg) => {
+                    showLoadingState(slab, msg);
+                });
                 if (data.uspsError) {
                     // Still failed
                     slab.innerHTML = `<div class="error-header">⚠️ USPS @${data.uspsError.stage || 'unknown'}: retry failed</div>`;
@@ -289,11 +315,12 @@
                 window.open('https://wego.here.com/', '_blank', 'noopener');
             });
 
-        setUSPSState(slab, '');
-        slab.textContent = 'USPS: (pending)';
+        showLoadingState(slab, 'Starting verification...');
 
         try {
-            const data = await uspsStandardizeLine(address);
+            const data = await uspsStandardizeLine(address, (msg) => {
+                showLoadingState(slab, msg);
+            });
 
             // If USPS succeeded, show success (ignore AI errors - fallback worked)
             if (data.result && !data.uspsError) {

@@ -375,6 +375,39 @@ body {
 	background: rgba(255, 107, 107, 0.08);
 }
 
+.usps-slab.loading {
+	border-color: var(--accent);
+	background: rgba(0, 212, 224, 0.06);
+}
+
+/* Loading State */
+.loading-state {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.spinner {
+	width: 18px;
+	height: 18px;
+	border: 2px solid var(--border);
+	border-top-color: var(--accent);
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.loading-text {
+	color: var(--accent);
+	font-weight: 600;
+	font-family: "Inter", ui-sans-serif, sans-serif;
+}
+
 /* USPS Result & Meta */
 .usps-result {
 	line-height: 1.6;
@@ -481,8 +514,22 @@ body {
 .app-footer {
 	text-align: center;
 	color: var(--muted);
-	margin-top: 24px;
-	opacity: 0.7;
+	margin-top: 32px;
+	padding-top: 20px;
+	border-top: 1px solid var(--border);
+	opacity: 0.6;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.app-footer small {
+	display: block;
+}
+
+.footer-team {
+	font-size: 11px;
+	opacity: 0.8;
 }
 
 /* Responsive - Tablet */
