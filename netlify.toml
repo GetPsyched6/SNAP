@@ -2,13 +2,17 @@
   # Directory to deploy (your static files)
   publish = "."
   # Build command (if needed)
-  command = "echo 'No build needed'"
+  command = "cd netlify/functions && npm install"
   # Functions directory
   functions = "netlify/functions"
 
 [functions]
   # Node.js version for functions
   node_bundler = "esbuild"
+  external_node_modules = ["openai"]
+
+[context.production.environment]
+  NODE_VERSION = "20"
 
 [[redirects]]
   from = "/api/*"
