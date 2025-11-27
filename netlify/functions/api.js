@@ -69,7 +69,7 @@ function extractJSON(text) {
 
 function zipFallback(line) {
   const zip = (line.match(/\b\d{5}(?:-\d{4})?\b/) || [''])[0];
-  return { city: '', state: '', ZIPCode: zip.replace(/-.*/, '') };
+  return { city: '', state: '', ZIPCode: zip.replace(/-.*/, ''), _fallback: true };
 }
 
 async function parseAddressWithLLM(addressLine) {
@@ -120,8 +120,18 @@ async function standardizeWithUSPS({ streetAddress, city, state, ZIPCode }, bear
   }
 }
 
+// Build query object from parsed fields
+function buildQuery(parsed, addressLine) {
+  const stateFromLLM = (parsed.state || '').toUpperCase();
+  const ZIPCode = (parsed.postal || '').replace(/-.*/, '') || (parsed.ZIPCode || '');
+  let streetAddress = composeStreet(parsed).trim();
+  if (!streetAddress) streetAddress = deriveStreetFromLine(addressLine);
+  const city = (parsed.city || '').toUpperCase();
+  const state = stateFromLLM;
+  return { streetAddress, city, state, ZIPCode };
+}
+
 export async function handler(event) {
-  // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -129,87 +139,175 @@ export async function handler(event) {
     'Content-Type': 'application/json'
   };
 
-  // Handle preflight
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
 
-  // Route: /api/usps/standardize-line
   const path = event.path.replace('/.netlify/functions/api', '');
-  
+
+  // Original endpoint: parse with AI then call USPS
   if (path === '/usps/standardize-line' && event.httpMethod === 'POST') {
-    try {
-      const body = JSON.parse(event.body || '{}');
-      const { addressLine } = body;
-      
-      if (!addressLine || typeof addressLine !== 'string') {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'addressLine required' })
-        };
-      }
+    const body = JSON.parse(event.body || '{}');
+    const { addressLine } = body;
 
-      const bearer = await getToken();
-
-      let parsed;
-      try {
-        parsed = await parseAddressWithLLM(addressLine);
-      } catch {
-        parsed = zipFallback(addressLine);
-      }
-
-      const stateFromLLM = (parsed.state || '').toUpperCase();
-      const ZIPCode = (parsed.postal || '').replace(/-.*/, '') || (parsed.ZIPCode || '');
-
-      let streetAddress = composeStreet(parsed).trim();
-      if (!streetAddress) streetAddress = deriveStreetFromLine(addressLine);
-
-      let city = parsed.city || '';
-      let state = stateFromLLM;
-      if ((!city || !state) && ZIPCode) {
-        try {
-          const cs = await cityStateFromZIP(ZIPCode, bearer);
-          city = city || (cs.city || '').toUpperCase();
-          state = state || (cs.state || '').toUpperCase();
-        } catch { /* ignore */ }
-      }
-
-      if (!streetAddress) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            stage: 'address',
-            status: 400,
-            body: 'streetAddress is empty after parse/fallback'
-          })
-        };
-      }
-
-      const result = await standardizeWithUSPS(
-        { streetAddress, city, state, ZIPCode },
-        bearer
-      );
-
+    if (!addressLine || typeof addressLine !== 'string') {
       return {
-        statusCode: 200,
+        statusCode: 400,
         headers,
-        body: JSON.stringify({
-          input: { addressLine },
-          parsed: { ...parsed, state, postal: parsed.postal || ZIPCode },
-          query: { streetAddress, city, state, ZIPCode },
-          result
-        })
-      };
-    } catch (e) {
-      const payload = typeof e === 'object' ? e : { error: String(e) };
-      return {
-        statusCode: payload.status || 500,
-        headers,
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ error: 'addressLine required' })
       };
     }
+
+    let bearer;
+    try {
+      bearer = await getToken();
+    } catch (e) {
+      return {
+        statusCode: e.status || 500,
+        headers,
+        body: JSON.stringify({ stage: 'oauth', error: e.body || 'OAuth failed' })
+      };
+    }
+
+    // Parse with AI
+    let parsed;
+    let aiError = null;
+    try {
+      parsed = await parseAddressWithLLM(addressLine);
+    } catch (err) {
+      aiError = err.message || String(err);
+      parsed = zipFallback(addressLine);
+    }
+
+    // Build query
+    let query = buildQuery(parsed, addressLine);
+
+    // Try to enrich city/state from ZIP if missing
+    if ((!query.city || !query.state) && query.ZIPCode) {
+      try {
+        const cs = await cityStateFromZIP(query.ZIPCode, bearer);
+        query.city = query.city || (cs.city || '').toUpperCase();
+        query.state = query.state || (cs.state || '').toUpperCase();
+      } catch { /* ignore */ }
+    }
+
+    // Validate streetAddress
+    if (!query.streetAddress) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          stage: 'parse',
+          error: 'Could not extract street address',
+          aiError,
+          parsed,
+          query
+        })
+      };
+    }
+
+    // Call USPS
+    let uspsError = null;
+    let result = null;
+    try {
+      result = await standardizeWithUSPS(query, bearer);
+    } catch (e) {
+      uspsError = {
+        stage: e.stage || 'address',
+        status: e.status,
+        body: e.body
+      };
+    }
+
+    // Always return parsed and query, even on error
+    const response = {
+      input: { addressLine },
+      parsed: {
+        number: parsed.number || '',
+        prefix: parsed.prefix || '',
+        name: parsed.name || '',
+        type: parsed.type || '',
+        suffix: parsed.suffix || '',
+        city: parsed.city || '',
+        state: (parsed.state || '').toUpperCase(),
+        postal: parsed.postal || parsed.ZIPCode || ''
+      },
+      query,
+      aiError,
+      uspsError,
+      result
+    };
+
+    return {
+      statusCode: uspsError ? (uspsError.status || 500) : 200,
+      headers,
+      body: JSON.stringify(response)
+    };
+  }
+
+  // Retry endpoint: skip AI parsing, use provided fields directly
+  if (path === '/usps/retry' && event.httpMethod === 'POST') {
+    const body = JSON.parse(event.body || '{}');
+    const { streetAddress, city, state, ZIPCode } = body;
+
+    if (!streetAddress) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'streetAddress required' })
+      };
+    }
+
+    let bearer;
+    try {
+      bearer = await getToken();
+    } catch (e) {
+      return {
+        statusCode: e.status || 500,
+        headers,
+        body: JSON.stringify({ stage: 'oauth', error: e.body || 'OAuth failed' })
+      };
+    }
+
+    const query = {
+      streetAddress: streetAddress || '',
+      city: (city || '').toUpperCase(),
+      state: (state || '').toUpperCase(),
+      ZIPCode: ZIPCode || ''
+    };
+
+    // Try to enrich city/state from ZIP if missing
+    if ((!query.city || !query.state) && query.ZIPCode) {
+      try {
+        const cs = await cityStateFromZIP(query.ZIPCode, bearer);
+        query.city = query.city || (cs.city || '').toUpperCase();
+        query.state = query.state || (cs.state || '').toUpperCase();
+      } catch { /* ignore */ }
+    }
+
+    let uspsError = null;
+    let result = null;
+    try {
+      result = await standardizeWithUSPS(query, bearer);
+    } catch (e) {
+      uspsError = {
+        stage: e.stage || 'address',
+        status: e.status,
+        body: e.body
+      };
+    }
+
+    const response = {
+      query,
+      uspsError,
+      result
+    };
+
+    return {
+      statusCode: uspsError ? (uspsError.status || 500) : 200,
+      headers,
+      body: JSON.stringify(response)
+    };
   }
 
   return {
@@ -218,4 +316,3 @@ export async function handler(event) {
     body: JSON.stringify({ error: 'Not found' })
   };
 }
-

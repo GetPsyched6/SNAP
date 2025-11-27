@@ -375,6 +375,104 @@ body {
 	background: rgba(255, 107, 107, 0.08);
 }
 
+/* USPS Result & Meta */
+.usps-result {
+	line-height: 1.6;
+}
+
+.usps-meta {
+	opacity: 0.7;
+	font-size: 12px;
+}
+
+/* Error Header */
+.error-header {
+	color: var(--error);
+	font-weight: 600;
+	font-size: 13px;
+	margin-bottom: 14px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid rgba(255, 107, 107, 0.2);
+	font-family: "Inter", ui-sans-serif, sans-serif;
+}
+
+/* Retry Form */
+.retry-form {
+	margin-top: 4px;
+}
+
+.retry-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+	gap: 10px;
+	margin-bottom: 14px;
+}
+
+.retry-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.retry-field-wide {
+	grid-column: span 2;
+}
+
+.retry-field label {
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.8px;
+	color: var(--muted);
+	font-family: "Inter", ui-sans-serif, sans-serif;
+}
+
+.retry-field input {
+	width: 100%;
+	padding: 8px 10px;
+	border-radius: 8px;
+	border: 1px solid var(--border);
+	background: var(--input-bg);
+	color: var(--text);
+	font-size: 13px;
+	font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+	outline: none;
+	transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.retry-field input::placeholder {
+	color: var(--muted);
+	opacity: 0.5;
+}
+
+.retry-field input:focus {
+	border-color: var(--accent);
+	box-shadow: var(--focus);
+}
+
+.retry-btn {
+	padding: 10px 20px;
+	font-size: 13px;
+	border-radius: 20px;
+	background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+	border: 1px solid var(--accent);
+	color: #fff;
+	font-weight: 700;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	font-family: "Inter", ui-sans-serif, sans-serif;
+}
+
+.retry-btn:hover:not(:disabled) {
+	filter: brightness(1.1);
+	box-shadow: 0 4px 16px rgba(0, 212, 224, 0.35);
+}
+
+.retry-btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
 /* Footer */
 .app-footer {
 	text-align: center;
