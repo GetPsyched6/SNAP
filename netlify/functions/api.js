@@ -143,7 +143,19 @@ export async function handler(event) {
     return { statusCode: 200, headers, body: '' };
   }
 
-  const path = event.path.replace('/.netlify/functions/api', '');
+  // Debug: log the incoming request info
+  console.log('[API] path:', event.path, 'rawUrl:', event.rawUrl, 'method:', event.httpMethod);
+
+  // Extract path - handle both direct calls and redirected calls
+  let path = event.path || '';
+  // Remove function prefix if present
+  path = path.replace('/.netlify/functions/api', '');
+  // Also try removing /api prefix (in case redirect preserves it differently)
+  if (path.startsWith('/api/')) {
+    path = path.replace('/api', '');
+  }
+
+  console.log('[API] normalized path:', path);
 
   // Original endpoint: parse with AI then call USPS
   if (path === '/usps/standardize-line' && event.httpMethod === 'POST') {
@@ -310,9 +322,18 @@ export async function handler(event) {
     };
   }
 
+  // Debug: return info about what we received
   return {
     statusCode: 404,
     headers,
-    body: JSON.stringify({ error: 'Not found' })
+    body: JSON.stringify({ 
+      error: 'Not found',
+      debug: {
+        receivedPath: event.path,
+        normalizedPath: path,
+        method: event.httpMethod,
+        rawUrl: event.rawUrl
+      }
+    })
   };
 }
