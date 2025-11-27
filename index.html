@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+		<title>Address Verifier Magic Wizard</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="style.css" />
+	</head>
+
+	<body data-theme="dark">
+		<!-- Theme Toggle -->
+		<button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+			<span class="theme-toggle-icon">🌙</span>
+			<span class="theme-toggle-label">Dark</span>
+		</button>
+
+		<main class="app-shell">
+			<header class="app-header">
+				<h1>Address Verifier Magic Wizard 🪄</h1>
+				<p class="subtitle">Address splitter and multi-platform linker</p>
+			</header>
+
+			<section class="card">
+				<form id="bulkForm">
+					<div class="field">
+						<label for="addrList">Addresses</label>
+						<textarea
+							id="addrList"
+							class="textarea"
+							rows="10"
+							placeholder="1600 Pennsylvania Ave NW, Washington, 20500&#10;123 N Main St SE, Springfield, 62704"
+						></textarea>
+					</div>
+					<div class="actions">
+						<button type="submit" class="btn primary">Submit</button>
+						<button type="button" id="bulkClear" class="btn ghost">
+							Clear
+						</button>
+					</div>
+				</form>
+			</section>
+
+			<section id="bulkResults" class="card results">
+				<div class="results-head">
+					<h2>Results</h2>
+					<p>Opens Google Maps, USPS site, and HERE</p>
+					<small>(pressing 'Go' pastes address to clipboard)</small>
+				</div>
+				<div id="cards" class="cards"></div>
+			</section>
+
+			<footer class="app-footer">
+				<small>Open Links • standalone</small>
+			</footer>
+		</main>
+
+		<script src="script.js"></script>
+	</body>
+</html>

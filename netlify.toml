@@ -1,0 +1,17 @@
+[build]
+  # Directory to deploy (your static files)
+  publish = "."
+  # Build command (if needed)
+  command = "echo 'No build needed'"
+  # Functions directory
+  functions = "netlify/functions"
+
+[functions]
+  # Node.js version for functions
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
