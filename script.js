@@ -82,10 +82,10 @@
 
     // Auto-detect API base: use local server in development, Netlify functions in production
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const API_BASE = isLocalhost ? 'http://localhost:5501' : '/api';
+    const API_BASE = isLocalhost ? 'http://localhost:5501/api' : '/api';
 
     async function uspsStandardizeLine(addressLine) {
-        const r = await fetch(`${API_BASE}/api/usps/standardize-line`, {
+        const r = await fetch(`${API_BASE}/usps/standardize-line`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ addressLine })
