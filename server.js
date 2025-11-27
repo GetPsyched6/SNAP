@@ -80,22 +80,22 @@ function zipFallback(line) {
 
 async function parseAddressWithLLM(addressLine) {
   if (!openai) throw new Error('LLM disabled');
-  const schema = {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      number: { type: 'string' }, prefix: { type: 'string' }, name: { type: 'string' }, type: { type: 'string' }, suffix: { type: 'string' },
-      city: { type: 'string' }, state: { type: 'string' }, postal: { type: 'string' }
-    },
-    required: ['name']
-  };
-  const resp = await openai.responses.create({
+  const resp = await openai.chat.completions.create({
     model: OPENAI_MODEL,
-    input: `Parse this US address into fields (JSON only): number, prefix, name, type, suffix, city, state (2-letter), postal.\nLine: ${addressLine}`,
-    text_format: { type: 'json_schema', json_schema: { name: 'AddressFields', schema, strict: true } },
+    messages: [
+      {
+        role: 'system',
+        content: 'You parse US addresses into JSON. Return ONLY valid JSON with these fields: number (street number), prefix (N/S/E/W), name (street name), type (St/Ave/Blvd/etc), suffix (NE/SW/etc), city, state (2-letter), postal (ZIP code). Use empty strings for missing fields.'
+      },
+      {
+        role: 'user',
+        content: addressLine
+      }
+    ],
+    response_format: { type: 'json_object' },
     temperature: 0
   });
-  const text = resp.output_text ?? resp.output?.[0]?.content?.[0]?.text ?? '';
+  const text = resp.choices?.[0]?.message?.content || '';
   if (!text) throw new Error('Empty LLM response');
   return extractJSON(text);
 }

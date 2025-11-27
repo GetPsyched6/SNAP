@@ -295,10 +295,12 @@
         try {
             const data = await uspsStandardizeLine(address);
 
-            if (data.uspsError || data.aiError) {
-                renderUSPSError(data, slab, idx);
-            } else if (data.result) {
+            // If USPS succeeded, show success (ignore AI errors - fallback worked)
+            if (data.result && !data.uspsError) {
                 renderUSPSSuccess(data, slab);
+            } else if (data.uspsError) {
+                // USPS failed - show error and retry form if AI parsed
+                renderUSPSError(data, slab, idx);
             } else {
                 slab.textContent = 'USPS: (no result)';
                 setUSPSState(slab, 'err');
