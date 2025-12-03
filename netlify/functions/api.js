@@ -1,5 +1,9 @@
-// Netlify Serverless Function for USPS API
+// Netlify Serverless Function for USPS API + HERE Geocoding
 import OpenAI from 'openai';
+
+// HERE API configuration
+const HERE_API_KEY = process.env.HERE_API_KEY || '';
+const HERE_GEOCODE_BASE = 'https://geocode.search.hereapi.com/v1/geocode';
 
 const ENV = (process.env.USPS_ENV || 'tem').toLowerCase();
 const OAUTH_URL = process.env.USPS_OAUTH_URL || (ENV === 'prod'
@@ -128,6 +132,137 @@ function buildQuery(parsed, addressLine) {
     const city = (parsed.city || '').toUpperCase();
     const state = stateFromLLM;
     return { streetAddress, city, state, ZIPCode };
+}
+
+// =====================================================================
+// HERE Geocoding Functions
+// =====================================================================
+
+// Classify one HERE item into "exact" / "partial" / "none"
+function classifyHereMatch(item) {
+    if (!item) return { verdict: 'none', reason: 'no-items' };
+
+    const rt = item.resultType || '';
+    const score = item.scoring?.queryScore ?? 0;
+
+    // Good: houseNumber and high score
+    if (rt === 'houseNumber' && score >= 0.9) {
+        return { verdict: 'exact', reason: 'houseNumber-high-score' };
+    }
+    // House, but not super-confident
+    if (rt === 'houseNumber') {
+        return { verdict: 'partial', reason: 'houseNumber-low-score' };
+    }
+    // Street-level / intersection-only
+    if (rt === 'street' || rt === 'intersection') {
+        return { verdict: 'partial', reason: `resultType-${rt}` };
+    }
+    // Only found locality / admin area
+    if (rt === 'locality' || rt === 'administrativeArea') {
+        return { verdict: 'partial', reason: `only-${rt}-level` };
+    }
+
+    // Fallback
+    return { verdict: 'none', reason: `resultType-${rt || 'unknown'}` };
+}
+
+// Normalize a HERE item into a smaller object we can show in the UI
+function normalizeHereItem(item) {
+    if (!item) return null;
+
+    const addr = item.address || {};
+    const pos = item.position || {};
+    const scoring = item.scoring || {};
+
+    const label =
+        addr.label ||
+        item.title ||
+        [
+            addr.houseNumber,
+            addr.street,
+            addr.district,
+            addr.city,
+            addr.state,
+            addr.postalCode,
+            addr.countryName,
+        ]
+            .filter(Boolean)
+            .join(', ');
+
+    const { verdict, reason } = classifyHereMatch(item);
+
+    return {
+        verdict,              // "exact" | "partial" | "none"
+        reason,               // short explanation string
+        matchLevel: item.resultType || null,     // e.g. "houseNumber", "street", "locality"
+        queryScore: scoring.queryScore ?? null,  // 0..1 match quality
+        fieldScore: scoring.fieldScore || null,  // optional, per-field scores
+
+        label,                // single-line display address
+        address: {
+            houseNumber: addr.houseNumber || null,
+            street: addr.street || null,
+            district: addr.district || null,
+            city: addr.city || null,
+            state: addr.state || null,
+            stateCode: addr.stateCode || null,
+            postalCode: addr.postalCode || null,
+            countryCode: addr.countryCode || null,
+            countryName: addr.countryName || null,
+        },
+
+        position: {
+            lat: typeof pos.lat === 'number' ? pos.lat : null,
+            lng: typeof pos.lng === 'number' ? pos.lng : null,
+        },
+
+        // Optional: entrances
+        access: Array.isArray(item.access)
+            ? item.access.map((p) => ({ lat: p.lat, lng: p.lng }))
+            : [],
+    };
+}
+
+// Core HERE call: addressLine -> { raw, items[], best }
+async function geocodeWithHere(addressLine, { limit = 1 } = {}) {
+    if (!HERE_API_KEY) {
+        throw new Error('HERE_API_KEY not configured');
+    }
+
+    const q = (addressLine || '').trim();
+    if (!q) throw new Error('Empty addressLine');
+
+    const url =
+        `${HERE_GEOCODE_BASE}?q=${encodeURIComponent(q)}` +
+        `&limit=${encodeURIComponent(limit)}` +
+        `&apiKey=${encodeURIComponent(HERE_API_KEY)}`;
+
+    const r = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+    });
+
+    const text = await r.text();
+    if (!r.ok) {
+        let body;
+        try { body = JSON.parse(text); } catch { body = text; }
+        const err = new Error(`HERE geocode HTTP ${r.status}`);
+        err.status = r.status;
+        err.body = body;
+        throw err;
+    }
+
+    let json;
+    try { json = JSON.parse(text); } catch { throw new Error('HERE geocode: invalid JSON'); }
+
+    const items = Array.isArray(json.items) ? json.items : [];
+    const first = items[0] || null;
+
+    return {
+        raw: json,
+        items,
+        best: normalizeHereItem(first),
+    };
 }
 
 export async function handler(event) {
@@ -319,6 +454,75 @@ export async function handler(event) {
             headers,
             body: JSON.stringify(response)
         };
+    }
+
+    // HERE Geocoding endpoint
+    if (path === '/here/geocode-line' && event.httpMethod === 'POST') {
+        const body = JSON.parse(event.body || '{}');
+        const { addressLine } = body;
+
+        if (!addressLine || typeof addressLine !== 'string') {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'addressLine required' })
+            };
+        }
+
+        try {
+            const data = await geocodeWithHere(addressLine, { limit: 1 });
+
+            if (!data.best) {
+                return {
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify({
+                        input: { addressLine },
+                        here: {
+                            verdict: 'none',
+                            reason: 'no-items',
+                            matchLevel: null,
+                            queryScore: null,
+                            label: null,
+                            address: null,
+                            position: null,
+                            access: [],
+                        },
+                        raw: data.raw,
+                    })
+                };
+            }
+
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({
+                    input: { addressLine },
+                    here: data.best,
+                    raw: data.raw,
+                })
+            };
+        } catch (err) {
+            console.error('[HERE] /api/here/geocode-line error:', err.status, err.body || err.message);
+
+            if (err.status) {
+                return {
+                    statusCode: err.status,
+                    headers,
+                    body: JSON.stringify({
+                        error: 'here-geocode-failed',
+                        status: err.status,
+                        body: err.body || null,
+                    })
+                };
+            }
+
+            return {
+                statusCode: 500,
+                headers,
+                body: JSON.stringify({ error: 'here-geocode-failed', message: String(err.message || err) })
+            };
+        }
     }
 
     // Debug: return info about what we received

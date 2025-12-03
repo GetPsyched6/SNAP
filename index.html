@@ -14,17 +14,71 @@
 	</head>
 
 	<body data-theme="dark">
-		<!-- Theme Toggle -->
-		<button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-			<span class="theme-toggle-icon">🌙</span>
-			<span class="theme-toggle-label">Dark</span>
-		</button>
+		<!-- Top Bar -->
+		<div class="top-bar">
+			<button class="icon-btn" id="settingsBtn" aria-label="Settings">
+				<svg
+					width="20"
+					height="20"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<circle cx="12" cy="12" r="3"></circle>
+					<path
+						d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+					></path>
+				</svg>
+			</button>
+			<button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+				<span class="theme-toggle-icon">🌙</span>
+				<span class="theme-toggle-label">Dark</span>
+			</button>
+		</div>
+
+		<!-- Settings Modal -->
+		<div class="settings-modal" id="settingsModal">
+			<div class="settings-panel">
+				<div class="settings-header">
+					<h2>Settings</h2>
+					<button class="settings-close" id="settingsClose" aria-label="Close">
+						<svg
+							width="24"
+							height="24"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
+							<line x1="18" y1="6" x2="6" y2="18"></line>
+							<line x1="6" y1="6" x2="18" y2="18"></line>
+						</svg>
+					</button>
+				</div>
+				<div class="settings-content">
+					<!-- Populated by JavaScript -->
+				</div>
+			</div>
+		</div>
 
 		<main class="app-shell">
 			<header class="app-header">
-				<h1>Address Verifier Magic Wizard 🪄</h1>
-				<p class="subtitle">Address splitter and multi-platform linker</p>
+				<h1>Automated Address Verifier (SNAP) 🪄</h1>
+				<p class="subtitle">Address splitter and multi-platform verifier</p>
 			</header>
+
+			<!-- Selected Providers Display -->
+			<section class="selected-providers-section">
+				<h3 class="selected-providers-title">Selected Map Providers</h3>
+				<div class="selected-providers" id="selectedProviders">
+					<!-- Populated by JavaScript -->
+				</div>
+			</section>
 
 			<section class="card">
 				<form id="bulkForm">
@@ -49,8 +103,8 @@
 			<section id="bulkResults" class="card results">
 				<div class="results-head">
 					<h2>Results</h2>
-					<p>Opens Google Maps, USPS site, and HERE</p>
-					<small>(pressing 'Go' pastes address to clipboard)</small>
+					<p>Opens addresses in your selected map providers</p>
+					<small>(pressing 'Go' copies address to clipboard)</small>
 				</div>
 				<div id="cards" class="cards"></div>
 			</section>
