@@ -97,7 +97,7 @@
     async function uspsStandardizeLine(addressLine, onProgress) {
         // Show AI parsing stage
         if (onProgress) onProgress('Parsing address with AI...');
-        
+
         const fetchPromise = fetch(`${API_BASE}/usps/standardize-line`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -111,14 +111,14 @@
 
         const r = await fetchPromise;
         clearTimeout(uspsStageTimeout);
-        
+
         const text = await r.text();
         return JSON.parse(text);
     }
 
     async function uspsRetry(fields, onProgress) {
         if (onProgress) onProgress('Retrying USPS validation...');
-        
+
         const r = await fetch(`${API_BASE}/usps/retry`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
