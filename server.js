@@ -471,5 +471,8 @@ app.post('/api/here/geocode-line', async (req, res) => {
   }
 });
 
+// Serve static files (HTML, CSS, JS, assets)
+app.use(express.static('.'));
+
 const PORT = process.env.PORT || 5501;
 app.listen(PORT, () => console.log(`USPS+LLM+HERE running on http://localhost:${PORT}`));

@@ -24,6 +24,38 @@
             logo: "assets/logos/google-search.png",
             buildUrl: (addr) => `https://www.google.com/search?q=${enc(addr)}`
         },
+        "bing-search": {
+            id: "bing-search",
+            label: "Bing Web Search",
+            category: "global",
+            type: "search",
+            logo: "assets/logos/bing-search.png",
+            buildUrl: (addr) => `https://www.bing.com/search?q=${enc(addr)}`
+        },
+        "duckduckgo-search": {
+            id: "duckduckgo-search",
+            label: "DuckDuckGo",
+            category: "global",
+            type: "search",
+            logo: "assets/logos/duckduckgo-search.png",
+            buildUrl: (addr) => `https://duckduckgo.com/?q=${enc(addr)}`
+        },
+        "yahoo-search": {
+            id: "yahoo-search",
+            label: "Yahoo Search",
+            category: "global",
+            type: "search",
+            logo: "assets/logos/yahoo-search.png",
+            buildUrl: (addr) => `https://search.yahoo.com/search?p=${enc(addr)}`
+        },
+        "ecosia-search": {
+            id: "ecosia-search",
+            label: "Ecosia",
+            category: "global",
+            type: "search",
+            logo: "assets/logos/ecosia-search.png",
+            buildUrl: (addr) => `https://www.ecosia.org/search?q=${enc(addr)}`
+        },
         "bing-maps": {
             id: "bing-maps",
             label: "Bing Maps",
@@ -161,6 +193,10 @@
         // Global - in preferred order
         "google-maps",
         "google-search",
+        "bing-search",
+        "duckduckgo-search",
+        "yahoo-search",
+        "ecosia-search",
         "bing-maps",
         "apple-maps",
         "openstreetmap",
@@ -245,6 +281,9 @@
     const settingsModal = document.getElementById("settingsModal");
     const settingsClose = document.getElementById("settingsClose");
     const selectedProvidersContainer = document.getElementById("selectedProviders");
+    const providersScrollWindow = document.getElementById("providersScrollWindow");
+    const providersScrollLeft = document.getElementById("providersScrollLeft");
+    const providersScrollRight = document.getElementById("providersScrollRight");
 
     // =========================================================================
     // UTILITY FUNCTIONS
@@ -281,6 +320,39 @@
     // =========================================================================
     // SELECTED PROVIDERS DISPLAY
     // =========================================================================
+    function updateProviderScrollArrows() {
+        if (!providersScrollWindow) return;
+        const maxScrollLeft = providersScrollWindow.scrollWidth - providersScrollWindow.clientWidth;
+        const showLeft = providersScrollWindow.scrollLeft > 8;
+        const showRight = maxScrollLeft - providersScrollWindow.scrollLeft > 8;
+
+        if (providersScrollLeft) {
+            providersScrollLeft.classList.toggle("visible", showLeft);
+        }
+        if (providersScrollRight) {
+            providersScrollRight.classList.toggle("visible", showRight);
+        }
+    }
+
+    // Setup scroll button event listeners
+    if (providersScrollLeft && providersScrollWindow) {
+        providersScrollLeft.addEventListener("click", () => {
+            providersScrollWindow.scrollBy({ left: -220, behavior: "smooth" });
+        });
+    }
+
+    if (providersScrollRight && providersScrollWindow) {
+        providersScrollRight.addEventListener("click", () => {
+            providersScrollWindow.scrollBy({ left: 220, behavior: "smooth" });
+        });
+    }
+
+    if (providersScrollWindow) {
+        providersScrollWindow.addEventListener("scroll", updateProviderScrollArrows);
+    }
+
+    window.addEventListener("resize", updateProviderScrollArrows);
+
     function renderSelectedProviders() {
         if (!selectedProvidersContainer) return;
 
@@ -289,6 +361,8 @@
 
         if (enabledSites.length === 0) {
             selectedProvidersContainer.innerHTML = '<span class="no-providers">No providers selected</span>';
+            if (providersScrollWindow) providersScrollWindow.scrollLeft = 0;
+            updateProviderScrollArrows();
             return;
         }
 
@@ -298,6 +372,8 @@
                 <img src="${provider.logo}" alt="${escapeHTML(provider.label)}" onerror="this.style.display='none'" />
             </div>`;
         }).join('');
+        if (providersScrollWindow) providersScrollWindow.scrollLeft = 0;
+        updateProviderScrollArrows();
     }
 
     // =========================================================================
