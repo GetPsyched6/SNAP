@@ -206,6 +206,7 @@
             key: "TXSTA_STLOUIS",
             label: "TXSTA – St. Louis County Maps",
             countyMatch: "St. Louis",
+            countyAliases: ["Saint Louis", "St Louis", "Stlouis"],
             kind: "static-page",
             baseUrl: "https://stlouiscountymo.gov/st-louis-county-departments/planning/stlco-2050/rfp-resources/maps/",
             canPrefill: false,
@@ -215,6 +216,7 @@
             key: "MOEAR_OFALLON",
             label: "MOEAR – St. Charles County",
             countyMatch: "St. Charles",
+            countyAliases: ["Saint Charles", "St Charles", "Stcharles"],
             kind: "arcgis-experience",
             baseUrl: "https://experience.arcgis.com/experience/7265e8a18aaa43d38643d0ceba127400/",
             canPrefill: false,
@@ -271,9 +273,31 @@
     };
 
     // County name to provider key mapping (for auto-detection)
+    // Include aliases for common variations
     const COUNTY_TO_PROVIDER = {};
+
+    // Helper to normalize county name for matching
+    function normalizeCountyName(name) {
+        if (!name) return '';
+        return name
+            .toLowerCase()
+            .replace(/\./g, '')           // Remove periods (St. -> St)
+            .replace(/saint/g, 'st')      // Saint -> St
+            .replace(/\s+/g, ' ')         // Normalize spaces
+            .trim();
+    }
+
+    // Build mapping with aliases
     Object.values(COUNTY_MAP_PROVIDERS).forEach(p => {
-        COUNTY_TO_PROVIDER[p.countyMatch.toLowerCase()] = p.key;
+        const normalized = normalizeCountyName(p.countyMatch);
+        COUNTY_TO_PROVIDER[normalized] = p.key;
+
+        // Add aliases if defined
+        if (p.countyAliases) {
+            p.countyAliases.forEach(alias => {
+                COUNTY_TO_PROVIDER[normalizeCountyName(alias)] = p.key;
+            });
+        }
     });
 
     // Get lists of prefillable and non-prefillable county maps
@@ -288,7 +312,8 @@
     // Find county provider by county name
     function findCountyProvider(countyName) {
         if (!countyName) return null;
-        const key = COUNTY_TO_PROVIDER[countyName.toLowerCase()];
+        const normalized = normalizeCountyName(countyName);
+        const key = COUNTY_TO_PROVIDER[normalized];
         return key ? COUNTY_MAP_PROVIDERS[key] : null;
     }
 
