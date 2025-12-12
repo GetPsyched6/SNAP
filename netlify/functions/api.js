@@ -204,6 +204,7 @@ function normalizeHereItem(item) {
             street: addr.street || null,
             district: addr.district || null,
             city: addr.city || null,
+            county: addr.county || null,
             state: addr.state || null,
             stateCode: addr.stateCode || null,
             postalCode: addr.postalCode || null,

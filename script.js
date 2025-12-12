@@ -184,9 +184,121 @@
             logo: "assets/logos/usps.png",
             type: "site",
             category: "global",
+            canPrefill: false,
             buildUrl: () => "https://tools.usps.com/zip-code-lookup.htm?byaddress"
         }
     };
+
+    // =========================================================================
+    // COUNTY MAP PROVIDERS
+    // =========================================================================
+    const COUNTY_MAP_PROVIDERS = {
+        "PATHO_ALLEGHENY": {
+            key: "PATHO_ALLEGHENY",
+            label: "PATHO – Allegheny County",
+            countyMatch: "Allegheny",
+            kind: "arcgis-experience",
+            baseUrl: "https://experience.arcgis.com/experience/68f5e4ae2f5b47b78cefcdf019e154bd/",
+            canPrefill: false,
+            buildUrl: () => "https://experience.arcgis.com/experience/68f5e4ae2f5b47b78cefcdf019e154bd/"
+        },
+        "TXSTA_STLOUIS": {
+            key: "TXSTA_STLOUIS",
+            label: "TXSTA – St. Louis County Maps",
+            countyMatch: "St. Louis",
+            kind: "static-page",
+            baseUrl: "https://stlouiscountymo.gov/st-louis-county-departments/planning/stlco-2050/rfp-resources/maps/",
+            canPrefill: false,
+            buildUrl: () => "https://stlouiscountymo.gov/st-louis-county-departments/planning/stlco-2050/rfp-resources/maps/"
+        },
+        "MOEAR_OFALLON": {
+            key: "MOEAR_OFALLON",
+            label: "MOEAR – St. Charles County",
+            countyMatch: "St. Charles",
+            kind: "arcgis-experience",
+            baseUrl: "https://experience.arcgis.com/experience/7265e8a18aaa43d38643d0ceba127400/",
+            canPrefill: false,
+            buildUrl: () => "https://experience.arcgis.com/experience/7265e8a18aaa43d38643d0ceba127400/"
+        },
+        "COMNT_ELPASO": {
+            key: "COMNT_ELPASO",
+            label: "COMNT – El Paso County",
+            countyMatch: "El Paso",
+            kind: "spatialest",
+            baseUrl: "https://property.spatialest.com/co/elpaso/#/",
+            canPrefill: false,
+            buildUrl: () => "https://property.spatialest.com/co/elpaso/#/"
+        },
+        "CAPAL_RIVERSIDE": {
+            key: "CAPAL_RIVERSIDE",
+            label: "CAPAL – Riverside County",
+            countyMatch: "Riverside",
+            kind: "custom-property-portal",
+            baseUrl: "https://rivcoview.rivcoacr.org/#/Property-Search",
+            canPrefill: false,
+            buildUrl: () => "https://rivcoview.rivcoacr.org/#/Property-Search"
+        },
+        "NMGAL_GALLUP": {
+            key: "NMGAL_GALLUP",
+            label: "NMGAL – City of Gallup (McKinley)",
+            countyMatch: "McKinley",
+            kind: "arcgis-webappviewer-find",
+            baseUrl: "https://cog.maps.arcgis.com/apps/webappviewer/index.html?id=67f6d4da7b284f07996d5c9381a82e05",
+            canPrefill: true,
+            buildUrl: (shortAddr) => {
+                const find = enc(shortAddr ?? "");
+                return `https://cog.maps.arcgis.com/apps/webappviewer/index.html?id=67f6d4da7b284f07996d5c9381a82e05&find=${find}`;
+            }
+        },
+        "FLMGR_BROWARD": {
+            key: "FLMGR_BROWARD",
+            label: "FLMGR – Broward County",
+            countyMatch: "Broward",
+            kind: "custom-property-portal",
+            baseUrl: "https://bcpa.net/RecMenu.asp",
+            canPrefill: false,
+            buildUrl: () => "https://bcpa.net/RecMenu.asp"
+        },
+        "ALMOB_MOBILE": {
+            key: "ALMOB_MOBILE",
+            label: "ALMOB – Mobile County",
+            countyMatch: "Mobile",
+            kind: "arcgis-webappviewer",
+            baseUrl: "https://cityofmobile.maps.arcgis.com/apps/webappviewer/index.html?id=44b3d1ecf57d4daa919a1e40ecca0c02",
+            canPrefill: false,
+            buildUrl: () => "https://cityofmobile.maps.arcgis.com/apps/webappviewer/index.html?id=44b3d1ecf57d4daa919a1e40ecca0c02"
+        }
+    };
+
+    // County name to provider key mapping (for auto-detection)
+    const COUNTY_TO_PROVIDER = {};
+    Object.values(COUNTY_MAP_PROVIDERS).forEach(p => {
+        COUNTY_TO_PROVIDER[p.countyMatch.toLowerCase()] = p.key;
+    });
+
+    // Get lists of prefillable and non-prefillable county maps
+    function getPrefillableCountyMaps() {
+        return Object.values(COUNTY_MAP_PROVIDERS).filter(p => p.canPrefill);
+    }
+
+    function getNonPrefillableCountyMaps() {
+        return Object.values(COUNTY_MAP_PROVIDERS).filter(p => !p.canPrefill);
+    }
+
+    // Find county provider by county name
+    function findCountyProvider(countyName) {
+        if (!countyName) return null;
+        const key = COUNTY_TO_PROVIDER[countyName.toLowerCase()];
+        return key ? COUNTY_MAP_PROVIDERS[key] : null;
+    }
+
+    // Extract short address (street only, no city/state/zip)
+    function getShortAddress(fullAddress) {
+        if (!fullAddress) return '';
+        // Split by comma and take first part
+        const parts = fullAddress.split(',');
+        return parts[0].trim();
+    }
 
     // Preferred opening order for sites (global first, then regional)
     const SITE_OPEN_ORDER = [
@@ -217,7 +329,13 @@
     // =========================================================================
     const DEFAULT_SETTINGS = {
         sites: ["google-maps", "here-site", "usps-site"],
-        apis: ["usps-api", "here-api"]
+        apis: ["usps-api", "here-api"],
+        countyMaps: {
+            enabled: false,
+            autoOpenPrefillable: false,
+            autoOpenNonPrefillable: false,
+            autoCopyShortAddress: false
+        }
     };
 
     function loadSettings() {
@@ -227,11 +345,17 @@
                 const parsed = JSON.parse(saved);
                 return {
                     sites: Array.isArray(parsed.sites) ? parsed.sites : DEFAULT_SETTINGS.sites,
-                    apis: Array.isArray(parsed.apis) ? parsed.apis : DEFAULT_SETTINGS.apis
+                    apis: Array.isArray(parsed.apis) ? parsed.apis : DEFAULT_SETTINGS.apis,
+                    countyMaps: {
+                        enabled: parsed.countyMaps?.enabled ?? DEFAULT_SETTINGS.countyMaps.enabled,
+                        autoOpenPrefillable: parsed.countyMaps?.autoOpenPrefillable ?? DEFAULT_SETTINGS.countyMaps.autoOpenPrefillable,
+                        autoOpenNonPrefillable: parsed.countyMaps?.autoOpenNonPrefillable ?? DEFAULT_SETTINGS.countyMaps.autoOpenNonPrefillable,
+                        autoCopyShortAddress: parsed.countyMaps?.autoCopyShortAddress ?? DEFAULT_SETTINGS.countyMaps.autoCopyShortAddress
+                    }
                 };
             }
         } catch { }
-        return { ...DEFAULT_SETTINGS };
+        return { ...DEFAULT_SETTINGS, countyMaps: { ...DEFAULT_SETTINGS.countyMaps } };
     }
 
     function saveSettings(settings) {
@@ -244,11 +368,41 @@
     // THEME TOGGLE
     // =========================================================================
     const themeToggle = document.getElementById("themeToggle");
+    const persistToggle = document.getElementById("persistToggle");
     const body = document.body;
-    const savedTheme = localStorage.getItem("theme") || "dark";
+
+    // Check if persistence is enabled
+    const persistEnabled = localStorage.getItem('persistAlt') === 'true';
+
+    // If not persisting, clear session state on load
+    if (!persistEnabled) {
+        sessionStorage.removeItem('specialMode');
+    }
+
+    let savedTheme = localStorage.getItem("theme") || "dark";
+
+    // Only load alt theme if persistence is explicitly enabled
+    if (savedTheme === "alt" && !persistEnabled) {
+        savedTheme = "dark";
+        localStorage.setItem("theme", "dark");
+    }
 
     body.setAttribute("data-theme", savedTheme);
     updateThemeToggle(savedTheme);
+
+    // If alt theme is active (from persistence), show persist toggle
+    if (savedTheme === "alt" && persistEnabled) {
+        sessionStorage.setItem('specialMode', 'true');
+        showPersistToggle();
+        updatePersistToggle(true);
+        // Update footer text
+        const footer = document.querySelector('.app-footer small:first-child');
+        if (footer) {
+            footer.textContent = 'Made by 💖 Hazeline Nishad 💖';
+            footer.classList.add('mode-active');
+            footer.style.textShadow = '0 0 10px rgba(245, 169, 184, 0.3)';
+        }
+    }
 
     function updateThemeToggle(theme) {
         const icon = themeToggle.querySelector(".theme-toggle-icon");
@@ -256,19 +410,122 @@
         if (theme === "light") {
             icon.textContent = "☀️";
             label.textContent = "Light";
+        } else if (theme === "alt") {
+            icon.textContent = "✨";
+            label.textContent = "Special Hazeline Mode";
         } else {
             icon.textContent = "🌙";
             label.textContent = "Dark";
         }
     }
 
+    function showPersistToggle() {
+        if (persistToggle) {
+            persistToggle.style.display = 'flex';
+        }
+    }
+
+    function hidePersistToggle() {
+        if (persistToggle) {
+            persistToggle.style.display = 'none';
+        }
+    }
+
+    function updatePersistToggle(isActive) {
+        if (!persistToggle) return;
+        const svg = persistToggle.querySelector('svg');
+        if (isActive) {
+            persistToggle.classList.add('active');
+            svg.style.fill = 'currentColor';
+        } else {
+            persistToggle.classList.remove('active');
+            svg.style.fill = 'none';
+        }
+    }
+
     themeToggle.addEventListener("click", () => {
         const current = body.getAttribute("data-theme");
-        const next = current === "dark" ? "light" : "dark";
+        let next;
+        const hasExtendedThemes = sessionStorage.getItem('specialMode') === 'true';
+
+        // Cycle through available themes
+        if (hasExtendedThemes) {
+            if (current === "dark") {
+                next = "light";
+            } else if (current === "light") {
+                next = "alt";
+                showPersistToggle();
+                updatePersistToggle(localStorage.getItem('persistAlt') === 'true');
+            } else {
+                // Switching away from alt
+                next = "dark";
+                hidePersistToggle();
+
+                // If persistence was enabled, disable it
+                if (localStorage.getItem('persistAlt') === 'true') {
+                    localStorage.removeItem('persistAlt');
+                }
+
+                // Restore footer with transition
+                const footer = document.querySelector('.app-footer small:first-child');
+                if (footer) {
+                    footer.style.transition = 'opacity 0.3s ease';
+                    footer.style.opacity = '0';
+                    setTimeout(() => {
+                        footer.textContent = 'Made by Roshin Nishad';
+                        footer.classList.remove('mode-active');
+                        footer.style.textShadow = '';
+                        footer.style.opacity = '1';
+                    }, 300);
+                }
+            }
+        } else {
+            // Standard theme toggle
+            next = current === "dark" ? "light" : "dark";
+        }
+
         body.setAttribute("data-theme", next);
-        localStorage.setItem("theme", next);
+        // Persist theme if enabled or if not alt
+        if (next !== "alt" || localStorage.getItem('persistAlt') === 'true') {
+            localStorage.setItem("theme", next);
+        }
         updateThemeToggle(next);
     });
+
+    // Persist toggle handler
+    if (persistToggle) {
+        persistToggle.addEventListener("click", () => {
+            const isCurrentlyPersisted = localStorage.getItem('persistAlt') === 'true';
+
+            if (isCurrentlyPersisted) {
+                // Disable persistence - switch back to dark theme
+                localStorage.removeItem('persistAlt');
+                localStorage.setItem("theme", "dark");
+                sessionStorage.removeItem('specialMode');
+                body.setAttribute("data-theme", "dark");
+                updateThemeToggle("dark");
+                hidePersistToggle();
+
+                // Restore footer with transition
+                const footer = document.querySelector('.app-footer small:first-child');
+                if (footer) {
+                    footer.style.transition = 'opacity 0.3s ease';
+                    footer.style.opacity = '0';
+                    setTimeout(() => {
+                        footer.textContent = 'Made by Roshin Nishad';
+                        footer.classList.remove('mode-active');
+                        footer.style.textShadow = '';
+                        footer.style.opacity = '1';
+                    }, 300);
+                }
+            } else {
+                // Enable persistence
+                localStorage.setItem('persistAlt', 'true');
+                localStorage.setItem("theme", "alt");
+                updatePersistToggle(true);
+            }
+        });
+    }
 
     // =========================================================================
     // DOM ELEMENTS
@@ -359,19 +616,29 @@
         const allProviders = { ...MAP_PROVIDERS, ...SITE_PROVIDERS };
         const enabledSites = settings.sites.filter(id => allProviders[id]);
 
-        if (enabledSites.length === 0) {
+        const hasCountyMaps = settings.countyMaps.enabled;
+        const hasAnything = enabledSites.length > 0 || hasCountyMaps;
+
+        if (!hasAnything) {
             selectedProvidersContainer.innerHTML = '<span class="no-providers">No providers selected</span>';
             if (providersScrollWindow) providersScrollWindow.scrollLeft = 0;
             updateProviderScrollArrows();
             return;
         }
 
-        selectedProvidersContainer.innerHTML = enabledSites.map(id => {
+        let html = enabledSites.map(id => {
             const provider = allProviders[id];
             return `<div class="provider-icon" title="${escapeHTML(provider.label)}">
                 <img src="${provider.logo}" alt="${escapeHTML(provider.label)}" onerror="this.style.display='none'" />
             </div>`;
         }).join('');
+
+        // Add county maps icon if enabled
+        if (hasCountyMaps) {
+            html += `<div class="provider-icon provider-icon-emoji" title="County Maps">🗺️</div>`;
+        }
+
+        selectedProvidersContainer.innerHTML = html;
         if (providersScrollWindow) providersScrollWindow.scrollLeft = 0;
         updateProviderScrollArrows();
     }
@@ -402,6 +669,11 @@
             regionalByRegion[p.region].push(p);
         });
 
+        const prefillableList = getPrefillableCountyMaps();
+        const nonPrefillableList = getNonPrefillableCountyMaps();
+        const allCountyMaps = Object.values(COUNTY_MAP_PROVIDERS);
+        const countyMapsDisabled = !settings.countyMaps.enabled;
+
         let html = `
             <div class="settings-section">
                 <h3 class="settings-section-title">APIs</h3>
@@ -413,11 +685,155 @@
             </div>
 
             <div class="settings-section">
+                <h3 class="settings-section-title">County Maps</h3>
+                <p class="settings-section-desc">County-level property and GIS maps</p>
+                <div class="provider-list">
+                    <div class="provider-item">
+                        <div class="provider-info">
+                            <div class="provider-logo provider-logo-icon">🗺️</div>
+                            <span class="provider-name">Allow County Maps</span>
+                            <button class="info-btn" data-info="county-maps-info" aria-label="Info">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <button class="provider-toggle ${settings.countyMaps.enabled ? 'active' : ''}" 
+                                data-provider-id="county-maps-enabled"
+                                data-provider-type="county-main"
+                                aria-pressed="${settings.countyMaps.enabled}">
+                            <span class="toggle-track">
+                                <span class="toggle-thumb"></span>
+                            </span>
+                        </button>
+                    </div>
+                    <div class="info-popup" id="county-maps-info" style="display: none;">
+                        <div class="info-popup-content">
+                            <h4>Available County Maps</h4>
+                            <p>When enabled, a county map card appears for each address result.</p>
+                            <div class="info-list-scroll">
+                                <ul>
+                                    ${allCountyMaps.map(p => `<li><strong>${escapeHTML(p.label)}</strong> – ${p.canPrefill ? '✅ Supports prefill' : '❌ Manual entry'}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sub-settings ${countyMapsDisabled ? 'disabled' : ''}">
+                    <div class="provider-list">
+                        <div class="provider-item sub-setting-item">
+                            <div class="provider-info">
+                                <span class="provider-name">Auto-open prefillable county maps</span>
+                                <button class="info-btn" data-info="prefillable-info" aria-label="Info" ${countyMapsDisabled ? 'disabled' : ''}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                            <button class="provider-toggle ${settings.countyMaps.autoOpenPrefillable ? 'active' : ''}" 
+                                    data-provider-id="county-auto-prefillable"
+                                    data-provider-type="county-sub"
+                                    aria-pressed="${settings.countyMaps.autoOpenPrefillable}"
+                                    ${countyMapsDisabled ? 'disabled' : ''}>
+                                <span class="toggle-track">
+                                    <span class="toggle-thumb"></span>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="info-popup" id="prefillable-info" style="display: none;">
+                            <div class="info-popup-content">
+                                <h4>Prefillable County Maps</h4>
+                                <p>These maps support automatic address prefilling in the URL:</p>
+                                <ul>
+                                    ${prefillableList.length > 0 ? prefillableList.map(p => `<li>${escapeHTML(p.label)}</li>`).join('') : '<li>Currently only: City of Gallup (McKinley County)</li>'}
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="provider-item sub-setting-item">
+                            <div class="provider-info">
+                                <span class="provider-name">Auto-open non-prefillable county maps</span>
+                                <button class="info-btn" data-info="non-prefillable-info" aria-label="Info" ${countyMapsDisabled ? 'disabled' : ''}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                            <button class="provider-toggle ${settings.countyMaps.autoOpenNonPrefillable ? 'active' : ''}" 
+                                    data-provider-id="county-auto-non-prefillable"
+                                    data-provider-type="county-sub"
+                                    aria-pressed="${settings.countyMaps.autoOpenNonPrefillable}"
+                                    ${countyMapsDisabled ? 'disabled' : ''}>
+                                <span class="toggle-track">
+                                    <span class="toggle-thumb"></span>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="info-popup" id="non-prefillable-info" style="display: none;">
+                            <div class="info-popup-content">
+                                <h4>Non-Prefillable County Maps</h4>
+                                <p>These maps require manual address entry:</p>
+                                <div class="info-list-scroll">
+                                    <ul>
+                                        ${nonPrefillableList.map(p => `<li>${escapeHTML(p.label)}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="provider-item sub-setting-item">
+                            <div class="provider-info">
+                                <span class="provider-name">Auto-copy short address to clipboard</span>
+                                <button class="info-btn" data-info="short-addr-info" aria-label="Info" ${countyMapsDisabled ? 'disabled' : ''}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                            <button class="provider-toggle ${settings.countyMaps.autoCopyShortAddress ? 'active' : ''}" 
+                                    data-provider-id="county-auto-copy-short"
+                                    data-provider-type="county-sub"
+                                    aria-pressed="${settings.countyMaps.autoCopyShortAddress}"
+                                    ${countyMapsDisabled ? 'disabled' : ''}>
+                                <span class="toggle-track">
+                                    <span class="toggle-thumb"></span>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="info-popup" id="short-addr-info" style="display: none;">
+                            <div class="info-popup-content">
+                                <h4>Short Address Format</h4>
+                                <p>Many county maps only work with "short addresses" – just the street portion without city, state, or ZIP.</p>
+                                <p><strong>Example:</strong></p>
+                                <ul>
+                                    <li>Full: 115 N Andrews Ave, Fort Lauderdale, FL 33301</li>
+                                    <li>Short: 115 N Andrews Ave</li>
+                                </ul>
+                                <p>When enabled, the short address is copied to your clipboard instead of the full address.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
                 <h3 class="settings-section-title">Global Sites</h3>
                 <p class="settings-section-desc">Major map services available worldwide</p>
                 <div class="provider-list">
-                    ${globalSites.map(p => renderProviderToggle(p, settings.sites.includes(p.id), "site")).join('')}
-                    ${renderProviderToggle(SITE_PROVIDERS["usps-site"], settings.sites.includes("usps-site"), "site")}
+                    ${globalSites.map(p => {
+            const subtext = p.id === "here-site" ? "Does not support address prefilling" : null;
+            return renderProviderToggle(p, settings.sites.includes(p.id), "site", subtext);
+        }).join('')}
+                    ${renderProviderToggle(SITE_PROVIDERS["usps-site"], settings.sites.includes("usps-site"), "site", "Does not support address prefilling")}
                 </div>
             </div>
 
@@ -439,19 +855,39 @@
         content.querySelectorAll(".provider-toggle").forEach(toggle => {
             toggle.addEventListener("click", handleToggleClick);
         });
+
+        // Add info button listeners
+        content.querySelectorAll(".info-btn").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const infoId = btn.dataset.info;
+                const popup = document.getElementById(infoId);
+                if (popup) {
+                    const isVisible = popup.style.display !== 'none';
+                    // Hide all popups first
+                    content.querySelectorAll('.info-popup').forEach(p => p.style.display = 'none');
+                    // Toggle this one
+                    popup.style.display = isVisible ? 'none' : 'block';
+                }
+            });
+        });
     }
 
-    function renderProviderToggle(provider, enabled, type) {
+    function renderProviderToggle(provider, enabled, type, subtext = null) {
+        const idAttr = provider.id || provider.key;
         return `
             <div class="provider-item">
                 <div class="provider-info">
                     <div class="provider-logo">
                         <img src="${provider.logo}" alt="" onerror="this.parentElement.innerHTML='📍'" />
                     </div>
-                    <span class="provider-name">${escapeHTML(provider.label)}</span>
+                    <div class="provider-name-wrap">
+                        <span class="provider-name">${escapeHTML(provider.label)}</span>
+                        ${subtext ? `<span class="provider-subtext">${escapeHTML(subtext)}</span>` : ''}
+                    </div>
                 </div>
                 <button class="provider-toggle ${enabled ? 'active' : ''}" 
-                        data-provider-id="${provider.id}" 
+                        data-provider-id="${idAttr}" 
                         data-provider-type="${type}"
                         aria-pressed="${enabled}">
                     <span class="toggle-track">
@@ -473,6 +909,29 @@
                 settings.apis = settings.apis.filter(x => x !== id);
             } else {
                 settings.apis.push(id);
+            }
+        } else if (type === "county-main") {
+            settings.countyMaps.enabled = !isActive;
+            // If disabling, also disable sub-settings
+            if (isActive) {
+                settings.countyMaps.autoOpenPrefillable = false;
+                settings.countyMaps.autoOpenNonPrefillable = false;
+                settings.countyMaps.autoCopyShortAddress = false;
+            }
+            // Re-render to update sub-settings state
+            toggle.classList.toggle("active");
+            toggle.setAttribute("aria-pressed", !isActive);
+            saveSettings(settings);
+            renderSelectedProviders();
+            renderSettingsModal();
+            return;
+        } else if (type === "county-sub") {
+            if (id === "county-auto-prefillable") {
+                settings.countyMaps.autoOpenPrefillable = !isActive;
+            } else if (id === "county-auto-non-prefillable") {
+                settings.countyMaps.autoOpenNonPrefillable = !isActive;
+            } else if (id === "county-auto-copy-short") {
+                settings.countyMaps.autoCopyShortAddress = !isActive;
             }
         } else {
             if (isActive) {
@@ -517,6 +976,7 @@
 
         const uspsEnabled = settings.apis.includes("usps-api");
         const hereEnabled = settings.apis.includes("here-api");
+        const countyEnabled = settings.countyMaps.enabled;
 
         wrap.innerHTML = `
             <div class="line-row">
@@ -526,6 +986,7 @@
             </div>
             ${uspsEnabled ? `<div class="usps-slab" id="usps-${idx}">USPS: (pending)</div>` : ''}
             ${hereEnabled ? `<div class="here-slab" id="here-${idx}">HERE: (pending)</div>` : ''}
+            ${countyEnabled ? `<div class="county-slab" id="county-${idx}">County: (waiting for HERE data)</div>` : ''}
         `;
         return wrap;
     }
@@ -740,7 +1201,7 @@
         setSlabState(slabEl, 'err');
     }
 
-    function renderHERESuccess(data, slabEl, idx) {
+    function renderHERESuccess(data, slabEl, idx, address) {
         try {
             const here = data?.here || {};
             const verdict = here.verdict || 'none';
@@ -813,10 +1274,115 @@
             } else {
                 setSlabState(slabEl, 'err');
             }
+
+            // Render county card if enabled
+            if (settings.countyMaps.enabled) {
+                const countySlab = document.getElementById(`county-${idx}`);
+                if (countySlab) {
+                    // Try normalized response first, fallback to raw response
+                    const county = here.address?.county || data?.raw?.items?.[0]?.address?.county || null;
+                    renderCountyCard(countySlab, county, address, idx);
+                }
+            }
         } catch {
             slabEl.textContent = 'HERE: (parse error)';
             setSlabState(slabEl, 'err');
         }
+    }
+
+    function renderCountyCard(slabEl, countyName, fullAddress, idx) {
+        const shortAddress = getShortAddress(fullAddress);
+        const provider = countyName ? findCountyProvider(countyName) : null;
+        const allCountyMaps = Object.values(COUNTY_MAP_PROVIDERS);
+
+        if (provider) {
+            // County detected - show detected card
+            const url = provider.canPrefill ? provider.buildUrl(shortAddress) : provider.buildUrl();
+
+            // Auto-open if enabled
+            const shouldAutoOpen = provider.canPrefill
+                ? settings.countyMaps.autoOpenPrefillable
+                : settings.countyMaps.autoOpenNonPrefillable;
+
+            if (shouldAutoOpen) {
+                // Copy short address to clipboard if not prefillable
+                if (!provider.canPrefill && settings.countyMaps.autoCopyShortAddress) {
+                    navigator.clipboard.writeText(shortAddress).catch(() => { });
+                }
+                window.open(url, "_blank", "noopener");
+            }
+            slabEl.innerHTML = `
+                <div class="county-result county-detected">
+                    <div class="county-header">
+                        <span class="county-icon">🗺️</span>
+                        <span class="county-title">County Detected: <strong>${escapeHTML(countyName)}</strong></span>
+                    </div>
+                    <div class="county-action">
+                        <span class="county-prompt">Open 
+                            <a href="${escapeHTML(url)}" target="_blank" rel="noopener" class="county-link" title="${escapeHTML(url)}">${escapeHTML(provider.label)}</a>?
+                        </span>
+                        <span class="county-note">${provider.canPrefill ? 'Address will be prefilled' : 'Copies short address to clipboard'}</span>
+                    </div>
+                    <button class="btn county-go" 
+                            data-county-key="${provider.key}" 
+                            data-short-addr="${encodeURIComponent(shortAddress)}"
+                            data-can-prefill="${provider.canPrefill}">Go</button>
+                </div>
+            `;
+            setSlabState(slabEl, 'ok');
+        } else {
+            // County not detected - show dropdown
+            slabEl.innerHTML = `
+                <div class="county-result county-not-detected">
+                    <div class="county-header">
+                        <span class="county-icon">🗺️</span>
+                        <span class="county-title">Unable to detect county</span>
+                    </div>
+                    <div class="county-action">
+                        <span class="county-prompt">Would you like to open a county map?</span>
+                        <span class="county-note">Copies short address to clipboard</span>
+                    </div>
+                    <div class="county-select-row">
+                        <select class="county-select" id="county-select-${idx}">
+                            <option value="">Select a county...</option>
+                            ${allCountyMaps.map(p => `<option value="${p.key}">${escapeHTML(p.label)}</option>`).join('')}
+                        </select>
+                        <button class="btn county-go-manual" 
+                                data-idx="${idx}"
+                                data-short-addr="${encodeURIComponent(shortAddress)}">Go</button>
+                    </div>
+                </div>
+            `;
+            setSlabState(slabEl, 'warn');
+        }
+    }
+
+    function renderCountyCardError(slabEl, fullAddress, idx) {
+        const shortAddress = getShortAddress(fullAddress);
+        const allCountyMaps = Object.values(COUNTY_MAP_PROVIDERS);
+
+        slabEl.innerHTML = `
+            <div class="county-result county-not-detected">
+                <div class="county-header">
+                    <span class="county-icon">🗺️</span>
+                    <span class="county-title">County detection unavailable</span>
+                </div>
+                <div class="county-action">
+                    <span class="county-prompt">Would you like to open a county map?</span>
+                    <span class="county-note">Copies short address to clipboard</span>
+                </div>
+                <div class="county-select-row">
+                    <select class="county-select" id="county-select-${idx}">
+                        <option value="">Select a county...</option>
+                        ${allCountyMaps.map(p => `<option value="${p.key}">${escapeHTML(p.label)}</option>`).join('')}
+                    </select>
+                    <button class="btn county-go-manual" 
+                            data-idx="${idx}"
+                            data-short-addr="${encodeURIComponent(shortAddress)}">Go</button>
+                </div>
+            </div>
+        `;
+        setSlabState(slabEl, 'warn');
     }
 
     function renderHEREError(error, slabEl, idx) {
@@ -894,6 +1460,60 @@
             return;
         }
 
+        // Handle County Go button (detected county)
+        const countyGoBtn = e.target.closest(".county-go");
+        if (countyGoBtn) {
+            const providerKey = countyGoBtn.dataset.countyKey;
+            const shortAddr = decodeURIComponent(countyGoBtn.dataset.shortAddr);
+            const canPrefill = countyGoBtn.dataset.canPrefill === 'true';
+            const provider = COUNTY_MAP_PROVIDERS[providerKey];
+
+            if (provider) {
+                // Copy short address to clipboard
+                try {
+                    await navigator.clipboard.writeText(shortAddr);
+                    const old = countyGoBtn.textContent;
+                    countyGoBtn.textContent = "Copied!";
+                    setTimeout(() => (countyGoBtn.textContent = old), 800);
+                } catch (err) {
+                    console.warn("Clipboard copy failed:", err);
+                }
+
+                // Open the county map
+                const url = canPrefill ? provider.buildUrl(shortAddr) : provider.buildUrl();
+                window.open(url, "_blank", "noopener");
+            }
+            return;
+        }
+
+        // Handle County Go Manual button (dropdown)
+        const countyGoManualBtn = e.target.closest(".county-go-manual");
+        if (countyGoManualBtn) {
+            const idx = countyGoManualBtn.dataset.idx;
+            const shortAddr = decodeURIComponent(countyGoManualBtn.dataset.shortAddr);
+            const select = document.getElementById(`county-select-${idx}`);
+
+            if (select && select.value) {
+                const provider = COUNTY_MAP_PROVIDERS[select.value];
+                if (provider) {
+                    // Copy short address to clipboard
+                    try {
+                        await navigator.clipboard.writeText(shortAddr);
+                        const old = countyGoManualBtn.textContent;
+                        countyGoManualBtn.textContent = "Copied!";
+                        setTimeout(() => (countyGoManualBtn.textContent = old), 800);
+                    } catch (err) {
+                        console.warn("Clipboard copy failed:", err);
+                    }
+
+                    // Open the county map
+                    const url = provider.canPrefill ? provider.buildUrl(shortAddr) : provider.buildUrl();
+                    window.open(url, "_blank", "noopener");
+                }
+            }
+            return;
+        }
+
         // Handle Go button click
         const btn = e.target.closest(".go");
         if (!btn) return;
@@ -903,12 +1523,14 @@
         const uspsSlab = document.getElementById(`usps-${idx}`);
         const hereSlab = document.getElementById(`here-${idx}`);
         const address = decodeURIComponent(btn.dataset.addr);
+        const shortAddress = getShortAddress(address);
 
-        // Copy to clipboard
+        // Copy to clipboard - use short address if setting is enabled
+        const clipboardText = settings.countyMaps.autoCopyShortAddress ? shortAddress : address;
         try {
-            await navigator.clipboard.writeText(address);
+            await navigator.clipboard.writeText(clipboardText);
             const old = btn.textContent;
-            btn.textContent = "Copied!";
+            btn.textContent = settings.countyMaps.autoCopyShortAddress ? "Short copied!" : "Copied!";
             setTimeout(() => (btn.textContent = old), 800);
         } catch (err) {
             console.warn("Clipboard copy failed:", err);
@@ -976,19 +1598,158 @@
 
                     if (data.error) {
                         renderHEREError(data.error, hereSlab, idx);
+                        // Still try to show county card if enabled
+                        if (settings.countyMaps.enabled) {
+                            const countySlab = document.getElementById(`county-${idx}`);
+                            if (countySlab) {
+                                renderCountyCardError(countySlab, address, idx);
+                            }
+                        }
                     } else if (data.here) {
-                        renderHERESuccess(data, hereSlab, idx);
+                        renderHERESuccess(data, hereSlab, idx, address);
                     } else {
                         hereSlab.textContent = 'HERE: (no result)';
                         setSlabState(hereSlab, 'err');
+                        // Still try to show county card if enabled
+                        if (settings.countyMaps.enabled) {
+                            const countySlab = document.getElementById(`county-${idx}`);
+                            if (countySlab) {
+                                renderCountyCardError(countySlab, address, idx);
+                            }
+                        }
                     }
                 } catch (err) {
                     hereSlab.textContent = `HERE: (error) ${err.message}`;
                     setSlabState(hereSlab, 'err');
+                    // Still try to show county card if enabled
+                    if (settings.countyMaps.enabled) {
+                        const countySlab = document.getElementById(`county-${idx}`);
+                        if (countySlab) {
+                            renderCountyCardError(countySlab, address, idx);
+                        }
+                    }
                 }
             })();
+        } else if (settings.countyMaps.enabled && !settings.apis.includes("here-api")) {
+            // HERE API not enabled but county maps is - show manual selection
+            const countySlab = document.getElementById(`county-${idx}`);
+            if (countySlab) {
+                renderCountyCardError(countySlab, address, idx);
+            }
         }
     });
+
+    // =========================================================================
+    // BRAND INTERACTION
+    // =========================================================================
+    const brandElement = document.querySelector('.brand');
+    let clickCount = 0;
+    let clickTimer = null;
+
+    if (brandElement) {
+        brandElement.addEventListener('click', () => {
+            clickCount++;
+
+            if (clickTimer) {
+                clearTimeout(clickTimer);
+            }
+
+            clickTimer = setTimeout(() => {
+                clickCount = 0;
+            }, 500);
+
+            if (clickCount === 3) {
+                clickCount = 0;
+                clearTimeout(clickTimer);
+                activateAltMode();
+            }
+        });
+    }
+
+    function activateAltMode() {
+        const footer = document.querySelector('.app-footer small:first-child');
+        if (!footer) return;
+
+        if (footer.classList.contains('mode-active')) return;
+
+        createSparkles(footer);
+
+        body.style.transition = 'background 0.8s ease, background-image 0.8s ease';
+        body.setAttribute('data-theme', 'alt');
+
+        sessionStorage.setItem('specialMode', 'true');
+
+        footer.classList.add('mode-active');
+
+        footer.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        footer.style.opacity = '0';
+        footer.style.transform = 'translateY(-10px)';
+
+        setTimeout(() => {
+            footer.textContent = 'Made by 💖 Hazeline Nishad 💖';
+            footer.style.transform = 'translateY(10px)';
+
+            setTimeout(() => {
+                footer.style.opacity = '1';
+                footer.style.transform = 'translateY(0)';
+
+                footer.style.textShadow = '0 0 20px rgba(245, 169, 184, 0.8), 0 0 40px rgba(91, 206, 250, 0.5)';
+
+                setTimeout(() => {
+                    footer.style.textShadow = '0 0 10px rgba(245, 169, 184, 0.3)';
+                }, 2000);
+            }, 50);
+        }, 400);
+
+        updateThemeToggle('alt');
+
+        // Show persist toggle and set its initial state
+        showPersistToggle();
+        updatePersistToggle(localStorage.getItem('persistAlt') === 'true');
+    }
+
+    function createSparkles(element) {
+        const rect = element.getBoundingClientRect();
+        const colors = ['#FFB6C1', '#FFC0CB', '#DDA0DD', '#8AB4F8', '#98D8C8', '#F7DC6F'];
+
+        for (let i = 0; i < 15; i++) {
+            const sparkle = document.createElement('div');
+            sparkle.className = 'sparkle';
+            sparkle.style.cssText = `
+                position: fixed;
+                left: ${rect.left + rect.width / 2}px;
+                top: ${rect.top + rect.height / 2}px;
+                width: 8px;
+                height: 8px;
+                background: ${colors[Math.floor(Math.random() * colors.length)]};
+                border-radius: 50%;
+                pointer-events: none;
+                z-index: 9999;
+                box-shadow: 0 0 10px currentColor;
+            `;
+
+            document.body.appendChild(sparkle);
+
+            const angle = (Math.PI * 2 * i) / 15;
+            const velocity = 100 + Math.random() * 100;
+            const tx = Math.cos(angle) * velocity;
+            const ty = Math.sin(angle) * velocity;
+
+            sparkle.animate([
+                {
+                    transform: 'translate(0, 0) scale(1)',
+                    opacity: 1
+                },
+                {
+                    transform: `translate(${tx}px, ${ty}px) scale(0)`,
+                    opacity: 0
+                }
+            ], {
+                duration: 800 + Math.random() * 400,
+                easing: 'cubic-bezier(0, 0.5, 0.5, 1)'
+            }).onfinish = () => sparkle.remove();
+        }
+    }
 
     // =========================================================================
     // INITIALIZATION
