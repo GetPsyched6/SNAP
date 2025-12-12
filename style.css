@@ -229,6 +229,17 @@
 	);
 }
 
+[data-theme="alt"] .usps-slab.info,
+[data-theme="alt"] .here-slab.info,
+[data-theme="alt"] .county-slab.info {
+	border-color: #91cef2;
+	background: linear-gradient(
+		135deg,
+		rgba(91, 206, 250, 0.15) 0%,
+		rgba(255, 255, 255, 0.5) 100%
+	);
+}
+
 [data-theme="alt"] .settings-panel {
 	background: #ffffff;
 	border: 2px solid rgba(245, 169, 184, 0.3);
@@ -445,6 +456,7 @@
 
 [data-theme="alt"] .county-select {
 	border-color: rgba(245, 169, 184, 0.3);
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(245,169,184,0.6)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
 }
 
 [data-theme="alt"] .county-select:focus {
@@ -765,7 +777,6 @@ body {
 .provider-subtext {
 	font-size: 11px;
 	color: var(--muted);
-	font-style: italic;
 }
 
 .provider-logo-icon {
@@ -1129,7 +1140,6 @@ body {
 .no-providers {
 	font-size: 13px;
 	color: var(--muted);
-	font-style: italic;
 }
 
 /* =========================================================================
@@ -1358,6 +1368,10 @@ body {
 	background: rgba(0, 131, 143, 0.05);
 }
 
+[data-theme="light"] .county-select {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
 [data-theme="light"] .info-popup {
 	background: rgba(255, 255, 255, 0.98);
 }
@@ -1390,6 +1404,13 @@ body {
 .county-slab.err {
 	border-color: var(--error);
 	background: rgba(255, 107, 107, 0.08);
+}
+
+.usps-slab.info,
+.here-slab.info,
+.county-slab.info {
+	border-color: var(--accent);
+	background: rgba(0, 188, 212, 0.08);
 }
 
 .usps-slab.loading,
@@ -1451,22 +1472,32 @@ body {
 .county-note {
 	font-size: 11px;
 	color: var(--muted);
-	font-style: italic;
+}
+
+.county-unsupported-msg {
+	font-size: 12px;
+	color: var(--accent);
+	font-weight: 500;
+}
+
+[data-theme="alt"] .county-unsupported-msg {
+	color: #5bcefa;
 }
 
 .county-go,
 .county-go-manual {
-	margin-top: 8px;
-	padding: 8px 16px;
-	font-size: 13px;
+	height: 40px;
+	padding: 0 20px;
+	font-size: 14px;
 	font-weight: 600;
-	border-radius: 8px;
+	border-radius: 16px;
 	background: var(--accent);
 	color: white;
 	border: none;
 	cursor: pointer;
 	transition: all 0.2s ease;
-	align-self: flex-start;
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 
 .county-go:hover,
@@ -1479,20 +1510,30 @@ body {
 	display: flex;
 	gap: 10px;
 	align-items: center;
-	flex-wrap: wrap;
-	margin-top: 8px;
+	justify-content: center;
+	margin-top: 12px;
 }
 
 .county-select {
 	flex: 1;
+	max-width: 400px;
 	min-width: 200px;
-	padding: 8px 12px;
-	font-size: 13px;
-	border: 1px solid var(--border);
-	border-radius: 8px;
+	height: 40px;
+	padding: 0 14px;
+	font-size: 14px;
+	border: 1.5px solid var(--border);
+	border-radius: 16px;
 	background: var(--input-bg);
 	color: var(--text);
 	cursor: pointer;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+	background-repeat: no-repeat;
+	background-position: right 12px center;
+	background-size: 16px;
+	padding-right: 40px;
 }
 
 .county-select:focus {
@@ -1566,7 +1607,6 @@ body {
 	font-size: 12px;
 	color: var(--muted);
 	margin-bottom: 6px;
-	font-style: italic;
 }
 
 .here-label {

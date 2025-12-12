@@ -1021,7 +1021,7 @@
     // =========================================================================
     function setSlabState(el, state) {
         if (!el) return;
-        el.classList.remove('ok', 'err', 'loading', 'warn');
+        el.classList.remove('ok', 'err', 'loading', 'warn', 'info');
         if (state) el.classList.add(state);
     }
 
@@ -1355,8 +1355,32 @@
                 </div>
             `;
             setSlabState(slabEl, 'ok');
+        } else if (countyName) {
+            // County detected but NOT in our supported list
+            slabEl.innerHTML = `
+                <div class="county-result county-unsupported">
+                    <div class="county-header">
+                        <span class="county-icon">🗺️</span>
+                        <span class="county-title">County Detected: <strong>${escapeHTML(countyName)}</strong></span>
+                    </div>
+                    <div class="county-action">
+                        <span class="county-prompt county-unsupported-msg">This county is not in our supported list.</span>
+                        <span class="county-note">Would you like to open a different county map?</span>
+                    </div>
+                    <div class="county-select-row">
+                        <select class="county-select" id="county-select-${idx}">
+                            <option value="">Select a county...</option>
+                            ${allCountyMaps.map(p => `<option value="${p.key}">${escapeHTML(p.label)}</option>`).join('')}
+                        </select>
+                        <button class="btn county-go-manual" 
+                                data-idx="${idx}"
+                                data-short-addr="${encodeURIComponent(shortAddress)}">Go</button>
+                    </div>
+                </div>
+            `;
+            setSlabState(slabEl, 'info');
         } else {
-            // County not detected - show dropdown
+            // County not detected at all - show dropdown
             slabEl.innerHTML = `
                 <div class="county-result county-not-detected">
                     <div class="county-header">
