@@ -1487,7 +1487,7 @@ body {
 .county-go,
 .county-go-manual {
 	height: 40px;
-	padding: 0 20px;
+	padding: 0 24px;
 	font-size: 14px;
 	font-weight: 600;
 	border-radius: 16px;
@@ -1498,6 +1498,8 @@ body {
 	transition: all 0.2s ease;
 	white-space: nowrap;
 	flex-shrink: 0;
+	align-self: center;
+	min-width: 70px;
 }
 
 .county-go:hover,
