@@ -420,6 +420,12 @@
         sessionStorage.setItem('specialMode', 'true');
         showPersistToggle();
         updatePersistToggle(true);
+        // Update logo text
+        const logo = document.querySelector('.brand');
+        if (logo) {
+            logo.textContent = "Hazeline's SNAP";
+            logo.classList.add('mode-active');
+        }
         // Update footer text
         const footer = document.querySelector('.app-footer small:first-child');
         if (footer) {
@@ -491,6 +497,18 @@
                     localStorage.removeItem('persistAlt');
                 }
 
+                // Restore logo with transition
+                const logo = document.querySelector('.brand');
+                if (logo) {
+                    logo.style.transition = 'opacity 0.3s ease';
+                    logo.style.opacity = '0';
+                    setTimeout(() => {
+                        logo.textContent = 'SNAP';
+                        logo.classList.remove('mode-active');
+                        logo.style.opacity = '1';
+                    }, 300);
+                }
+
                 // Restore footer with transition
                 const footer = document.querySelector('.app-footer small:first-child');
                 if (footer) {
@@ -530,6 +548,18 @@
                 body.setAttribute("data-theme", "dark");
                 updateThemeToggle("dark");
                 hidePersistToggle();
+
+                // Restore logo with transition
+                const logo = document.querySelector('.brand');
+                if (logo) {
+                    logo.style.transition = 'opacity 0.3s ease';
+                    logo.style.opacity = '0';
+                    setTimeout(() => {
+                        logo.textContent = 'SNAP';
+                        logo.classList.remove('mode-active');
+                        logo.style.opacity = '1';
+                    }, 300);
+                }
 
                 // Restore footer with transition
                 const footer = document.querySelector('.app-footer small:first-child');
@@ -1717,7 +1747,8 @@
 
     function activateAltMode() {
         const footer = document.querySelector('.app-footer small:first-child');
-        if (!footer) return;
+        const logo = document.querySelector('.brand');
+        if (!footer || !logo) return;
 
         if (footer.classList.contains('mode-active')) return;
 
@@ -1728,6 +1759,11 @@
 
         sessionStorage.setItem('specialMode', 'true');
 
+        // Animate logo change
+        logo.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        logo.style.opacity = '0';
+        logo.style.transform = 'scale(0.9)';
+
         footer.classList.add('mode-active');
 
         footer.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
@@ -1735,10 +1771,17 @@
         footer.style.transform = 'translateY(-10px)';
 
         setTimeout(() => {
+            logo.textContent = "Hazeline's SNAP";
+            logo.classList.add('mode-active');
+            logo.style.transform = 'scale(1.05)';
+
             footer.textContent = 'Made by 💖 Hazeline Nishad 💖';
             footer.style.transform = 'translateY(10px)';
 
             setTimeout(() => {
+                logo.style.opacity = '1';
+                logo.style.transform = 'scale(1)';
+
                 footer.style.opacity = '1';
                 footer.style.transform = 'translateY(0)';
 

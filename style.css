@@ -1,3 +1,6 @@
+/* Google Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Pacifico&family=Dancing+Script:wght@400;500&display=swap");
+
 /* Theme Variables */
 :root {
 	/* Dark mode (default) - Cyan theme */
@@ -514,6 +517,17 @@ body {
 	transition: background 0.3s ease, background-image 0.3s ease, color 0.3s ease;
 }
 
+/* Pink text selection highlight */
+::selection {
+	background: rgba(245, 169, 184, 0.4);
+	color: #ffffff;
+}
+
+::-moz-selection {
+	background: rgba(245, 169, 184, 0.4);
+	color: #ffffff;
+}
+
 /* =========================================================================
    TOP BAR
    ========================================================================= */
@@ -528,6 +542,9 @@ body {
 	justify-content: space-between;
 	padding: 16px 24px;
 	background: transparent;
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
 }
 
 .brand {
@@ -536,6 +553,23 @@ body {
 	font-weight: 600;
 	letter-spacing: 0.5px;
 	color: var(--accent);
+	transition: all 0.4s ease;
+	cursor: pointer;
+}
+
+.brand.mode-active {
+	font-family: "Pacifico", "Dancing Script", "Satisfy", "Cookie", cursive;
+	font-size: 28px;
+	font-weight: 400;
+	letter-spacing: 0.5px;
+}
+
+[data-theme="alt"] .brand.mode-active {
+	background: linear-gradient(135deg, #f5a9b8 0%, #5bcefa 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+	text-shadow: 0 0 20px rgba(245, 169, 184, 0.3);
 }
 
 .top-actions {
@@ -987,7 +1021,7 @@ body {
 .providers-bar {
 	position: relative;
 	background: transparent;
-	padding: 12px 24px;
+	padding: 8px 24px 4px;
 }
 
 .providers-container {
@@ -1147,7 +1181,7 @@ body {
    ========================================================================= */
 .app-shell {
 	max-width: 920px;
-	margin: 145px auto 0;
+	margin: 90px auto 0;
 	padding: 0 20px 40px;
 }
 
@@ -1886,6 +1920,23 @@ body {
 	.settings-content {
 		padding: 20px;
 	}
+
+	.county-select-row {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 8px;
+	}
+
+	.county-select {
+		max-width: 100%;
+		width: 100%;
+	}
+
+	.county-go,
+	.county-go-manual {
+		width: 100%;
+		min-width: auto;
+	}
 }
 
 /* =========================================================================
@@ -1903,6 +1954,14 @@ body {
 
 	.theme-toggle-label {
 		display: none;
+	}
+
+	.brand {
+		font-size: 22px;
+	}
+
+	.brand.mode-active {
+		font-size: 22px;
 	}
 
 	.app-header {
@@ -1982,7 +2041,8 @@ body {
 	}
 
 	.usps-slab,
-	.here-slab {
+	.here-slab,
+	.county-slab {
 		padding: 10px 12px;
 		font-size: 12px;
 		border-radius: 10px;
@@ -2097,5 +2157,48 @@ body {
 
 	.provider-toggle.active .toggle-thumb {
 		transform: translateX(18px);
+	}
+
+	/* County maps mobile */
+	.county-header {
+		flex-wrap: wrap;
+	}
+
+	.county-title {
+		font-size: 13px;
+		word-break: break-word;
+	}
+
+	.county-prompt {
+		font-size: 12px;
+		word-break: break-word;
+	}
+
+	.county-link {
+		word-break: break-all;
+	}
+
+	.county-note {
+		font-size: 10px;
+	}
+
+	.county-select-row {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 8px;
+	}
+
+	.county-select {
+		max-width: 100%;
+		width: 100%;
+		font-size: 14px;
+	}
+
+	.county-go,
+	.county-go-manual {
+		width: 100%;
+		min-width: auto;
+		font-size: 14px;
+		padding: 0 20px;
 	}
 }
