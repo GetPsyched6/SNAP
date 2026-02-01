@@ -3,10 +3,11 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import OpenAI from 'openai';
+import Tesseract from 'tesseract.js';
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // HERE API configuration
 const HERE_API_KEY = process.env.HERE_API_KEY || '';
@@ -153,6 +154,12 @@ function classifyHereMatch(item) {
 
   const rt = item.resultType || '';
   const score = item.scoring?.queryScore ?? 0;
+  const houseNumberType = item.houseNumberType || '';
+
+  // Interpolated results are approximations, so treat as partial match
+  if (houseNumberType === 'interpolated') {
+    return { verdict: 'partial', reason: 'houseNumber-interpolated' };
+  }
 
   // Good: houseNumber and high score
   if (rt === 'houseNumber' && score >= 0.9) {
@@ -200,11 +207,17 @@ function normalizeHereItem(item) {
 
   const { verdict, reason } = classifyHereMatch(item);
 
+  // Reduce score for interpolated matches to reflect uncertainty
+  let adjustedScore = scoring.queryScore ?? null;
+  if (item.houseNumberType === 'interpolated' && adjustedScore !== null) {
+    adjustedScore = Math.min(adjustedScore, 0.75);
+  }
+
   return {
     verdict,              // "exact" | "partial" | "none"
     reason,               // short explanation string
     matchLevel: item.resultType || null,     // e.g. "houseNumber", "street", "locality"
-    queryScore: scoring.queryScore ?? null,  // 0..1 match quality
+    queryScore: adjustedScore,  // 0..1 match quality (reduced for interpolated)
     fieldScore: scoring.fieldScore || null,  // optional, per-field scores
 
     label,                // single-line display address
@@ -468,6 +481,50 @@ app.post('/api/here/geocode-line', async (req, res) => {
     return res
       .status(500)
       .json({ error: 'here-geocode-failed', message: String(err.message || err) });
+  }
+});
+
+// =====================================================================
+// OCR Endpoint using Tesseract.js
+// =====================================================================
+app.post('/api/ocr/extract', async (req, res) => {
+  try {
+    const { image } = req.body || {};
+
+    if (!image || typeof image !== 'string') {
+      return res.status(400).json({ error: 'image (base64) required' });
+    }
+
+    // Extract base64 data (remove data URL prefix if present)
+    const base64Data = image.includes(',') ? image.split(',')[1] : image;
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+
+    // Run Tesseract OCR
+    const result = await Tesseract.recognize(imageBuffer, 'eng', {
+      logger: () => { } // Suppress logs
+    });
+
+    const data = result.data;
+
+    // Extract lines with confidence scores
+    const lines = (data.lines || []).map(line => ({
+      text: line.text.trim(),
+      confidence: Math.round(line.confidence * 10) / 10
+    })).filter(l => l.text.length > 0);
+
+    // Calculate overall confidence
+    const overallConfidence = lines.length > 0
+      ? Math.round((lines.reduce((sum, l) => sum + l.confidence, 0) / lines.length) * 10) / 10
+      : 0;
+
+    return res.json({
+      text: data.text.trim(),
+      lines,
+      overallConfidence
+    });
+  } catch (err) {
+    console.error('[OCR] error:', err.message || err);
+    return res.status(500).json({ error: 'ocr-failed', message: String(err.message || err) });
   }
 });
 

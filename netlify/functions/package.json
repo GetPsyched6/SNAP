@@ -3,9 +3,11 @@
 	"version": "1.0.0",
 	"type": "module",
 	"dependencies": {
-		"openai": "^5.23.0"
+		"openai": "^5.23.0",
+		"tesseract.js": "^5.1.1"
 	}
 }
+
 
 
 

@@ -1,5 +1,6 @@
-// Netlify Serverless Function for USPS API + HERE Geocoding
+// Netlify Serverless Function for USPS API + HERE Geocoding + OCR
 import OpenAI from 'openai';
+import Tesseract from 'tesseract.js';
 
 // HERE API configuration
 const HERE_API_KEY = process.env.HERE_API_KEY || '';
@@ -144,6 +145,12 @@ function classifyHereMatch(item) {
 
     const rt = item.resultType || '';
     const score = item.scoring?.queryScore ?? 0;
+    const houseNumberType = item.houseNumberType || '';
+
+    // Interpolated results are approximations, so treat as partial match
+    if (houseNumberType === 'interpolated') {
+        return { verdict: 'partial', reason: 'houseNumber-interpolated' };
+    }
 
     // Good: houseNumber and high score
     if (rt === 'houseNumber' && score >= 0.9) {
@@ -191,11 +198,17 @@ function normalizeHereItem(item) {
 
     const { verdict, reason } = classifyHereMatch(item);
 
+    // Reduce score for interpolated matches to reflect uncertainty
+    let adjustedScore = scoring.queryScore ?? null;
+    if (item.houseNumberType === 'interpolated' && adjustedScore !== null) {
+        adjustedScore = Math.min(adjustedScore, 0.75);
+    }
+
     return {
         verdict,              // "exact" | "partial" | "none"
         reason,               // short explanation string
         matchLevel: item.resultType || null,     // e.g. "houseNumber", "street", "locality"
-        queryScore: scoring.queryScore ?? null,  // 0..1 match quality
+        queryScore: adjustedScore,  // 0..1 match quality (reduced for interpolated)
         fieldScore: scoring.fieldScore || null,  // optional, per-field scores
 
         label,                // single-line display address
@@ -522,6 +535,61 @@ export async function handler(event) {
                 statusCode: 500,
                 headers,
                 body: JSON.stringify({ error: 'here-geocode-failed', message: String(err.message || err) })
+            };
+        }
+    }
+
+    // OCR endpoint using Tesseract.js
+    if (path === '/ocr/extract' && event.httpMethod === 'POST') {
+        const body = JSON.parse(event.body || '{}');
+        const { image } = body;
+
+        if (!image || typeof image !== 'string') {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'image (base64) required' })
+            };
+        }
+
+        try {
+            // Extract base64 data (remove data URL prefix if present)
+            const base64Data = image.includes(',') ? image.split(',')[1] : image;
+            const imageBuffer = Buffer.from(base64Data, 'base64');
+
+            // Run Tesseract OCR
+            const result = await Tesseract.recognize(imageBuffer, 'eng', {
+                logger: () => { } // Suppress logs
+            });
+
+            const data = result.data;
+
+            // Extract lines with confidence scores
+            const lines = (data.lines || []).map(line => ({
+                text: line.text.trim(),
+                confidence: Math.round(line.confidence * 10) / 10
+            })).filter(l => l.text.length > 0);
+
+            // Calculate overall confidence
+            const overallConfidence = lines.length > 0
+                ? Math.round((lines.reduce((sum, l) => sum + l.confidence, 0) / lines.length) * 10) / 10
+                : 0;
+
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({
+                    text: data.text.trim(),
+                    lines,
+                    overallConfidence
+                })
+            };
+        } catch (err) {
+            console.error('[OCR] error:', err.message || err);
+            return {
+                statusCode: 500,
+                headers,
+                body: JSON.stringify({ error: 'ocr-failed', message: String(err.message || err) })
             };
         }
     }

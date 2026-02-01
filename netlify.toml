@@ -9,7 +9,7 @@
 [functions]
   # Node.js version for functions
   node_bundler = "esbuild"
-  external_node_modules = ["openai"]
+  external_node_modules = ["openai", "tesseract.js"]
 
 [context.production.environment]
   NODE_VERSION = "20"

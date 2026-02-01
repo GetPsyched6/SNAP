@@ -1,161 +1,179 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width,initial-scale=1.0" />
-		<title>SNAP - Address Verifier</title>
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link
-			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-			rel="stylesheet"
-		/>
-		<link
-			href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@600&display=swap"
-			rel="stylesheet"
-		/>
-		<link rel="stylesheet" href="style.css" />
-	</head>
 
-	<body data-theme="dark">
-		<!-- Top Bar -->
-		<div class="top-bar">
-			<div class="brand">SNAP</div>
-			<div class="top-actions">
-				<button
-					class="persist-toggle"
-					id="persistToggle"
-					aria-label="Keep mode"
-					style="display: none"
-				>
-					<svg
-						width="18"
-						height="18"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+	<title>SNAP - Address Verifier</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+		rel="stylesheet" />
+	<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@600&display=swap" rel="stylesheet" />
+	<link rel="stylesheet" href="style.css" />
+</head>
+
+<body data-theme="dark">
+	<!-- Top Bar -->
+	<div class="top-bar">
+		<div class="brand">SNAP</div>
+		<div class="top-actions">
+			<button class="persist-toggle" id="persistToggle" aria-label="Keep mode" style="display: none">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+					stroke-linecap="round" stroke-linejoin="round">
+					<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+				</svg>
+				<span class="persist-label">Keep</span>
+			</button>
+			<button class="icon-btn" id="settingsBtn" aria-label="Settings">
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+					stroke-linecap="round" stroke-linejoin="round">
+					<circle cx="12" cy="12" r="3"></circle>
+					<path
+						d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+					</path>
+				</svg>
+			</button>
+			<button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+				<span class="theme-toggle-icon">🌙</span>
+				<span class="theme-toggle-label">Dark</span>
+			</button>
+		</div>
+	</div>
+
+	<!-- Settings Modal -->
+	<div class="settings-modal" id="settingsModal">
+		<div class="settings-panel">
+			<div class="settings-header">
+				<h2>Settings</h2>
+				<button class="settings-close" id="settingsClose" aria-label="Close">
+					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+						stroke-linecap="round" stroke-linejoin="round">
+						<line x1="18" y1="6" x2="6" y2="18"></line>
+						<line x1="6" y1="6" x2="18" y2="18"></line>
 					</svg>
-					<span class="persist-label">Keep</span>
-				</button>
-				<button class="icon-btn" id="settingsBtn" aria-label="Settings">
-					<svg
-						width="20"
-						height="20"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<circle cx="12" cy="12" r="3"></circle>
-						<path
-							d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
-						></path>
-					</svg>
-				</button>
-				<button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-					<span class="theme-toggle-icon">🌙</span>
-					<span class="theme-toggle-label">Dark</span>
 				</button>
 			</div>
+			<div class="settings-content">
+				<!-- Populated by JavaScript -->
+			</div>
 		</div>
+	</div>
 
-		<!-- Settings Modal -->
-		<div class="settings-modal" id="settingsModal">
-			<div class="settings-panel">
-				<div class="settings-header">
-					<h2>Settings</h2>
-					<button class="settings-close" id="settingsClose" aria-label="Close">
-						<svg
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						>
-							<line x1="18" y1="6" x2="6" y2="18"></line>
-							<line x1="6" y1="6" x2="18" y2="18"></line>
-						</svg>
-					</button>
-				</div>
-				<div class="settings-content">
+	<!-- Selected Providers Bar -->
+	<div class="providers-bar">
+		<div class="providers-container">
+			<span class="providers-label">Selected Map Providers</span>
+			<span class="providers-divider">|</span>
+			<button class="providers-scroll-btn left" id="providersScrollLeft" aria-label="Scroll left">
+				‹
+			</button>
+			<div class="providers-scroll-window" id="providersScrollWindow">
+				<div class="selected-providers" id="selectedProviders">
 					<!-- Populated by JavaScript -->
 				</div>
 			</div>
+			<button class="providers-scroll-btn right" id="providersScrollRight" aria-label="Scroll right">
+				›
+			</button>
 		</div>
+	</div>
 
-		<!-- Selected Providers Bar -->
-		<div class="providers-bar">
-			<div class="providers-container">
-				<span class="providers-label">Selected Map Providers</span>
-				<span class="providers-divider">|</span>
-				<button
-					class="providers-scroll-btn left"
-					id="providersScrollLeft"
-					aria-label="Scroll left"
-				>
-					‹
-				</button>
-				<div class="providers-scroll-window" id="providersScrollWindow">
-					<div class="selected-providers" id="selectedProviders">
-						<!-- Populated by JavaScript -->
+	<main class="app-shell">
+		<section class="card">
+			<form id="bulkForm">
+				<div class="field">
+					<label for="addrList">Addresses</label>
+					<div class="textarea-wrapper" id="textareaWrapper">
+						<textarea id="addrList" class="textarea" rows="10"
+							placeholder="1600 Pennsylvania Ave NW, Washington, 20500&#10;123 N Main St SE, Springfield, 62704&#10;&#10;💡 Tip: Drag & drop, paste (Ctrl+V), or upload an image to OCR addresses"></textarea>
+						<div class="drop-overlay" id="dropOverlay">
+							<div class="drop-icon">📷</div>
+							<div class="drop-text">Drop image to extract addresses</div>
+						</div>
 					</div>
 				</div>
-				<button
-					class="providers-scroll-btn right"
-					id="providersScrollRight"
-					aria-label="Scroll right"
-				>
-					›
+				<div class="actions">
+					<button type="submit" class="btn primary">Submit</button>
+					<button type="button" id="bulkClear" class="btn ghost">
+						Clear
+					</button>
+					<button type="button" id="uploadImageBtn" class="btn ghost">
+						<svg class="upload-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+							stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+							<circle cx="8.5" cy="8.5" r="1.5"></circle>
+							<polyline points="21 15 16 10 5 21"></polyline>
+						</svg>
+						Upload Image
+					</button>
+					<input type="file" id="imageFileInput" accept="image/*" style="display: none;" />
+				</div>
+			</form>
+		</section>
+
+		<section id="bulkResults" class="card results">
+			<div class="results-head">
+				<h2>Results</h2>
+				<p>Opens addresses in your selected map providers</p>
+				<small>(pressing 'Go' copies address to clipboard)</small>
+			</div>
+			<div id="cards" class="cards"></div>
+		</section>
+
+		<footer class="app-footer">
+			<small>Made by Roshin Nishad</small>
+			<small class="footer-team">TCS UPS Innovation / Rapid Labs Team</small>
+		</footer>
+	</main>
+
+	<!-- OCR Review Modal -->
+	<div class="ocr-modal" id="ocrModal">
+		<div class="ocr-panel">
+			<div class="ocr-header">
+				<h2>Review OCR Results</h2>
+				<button class="ocr-close" id="ocrClose" aria-label="Close">
+					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+						stroke-linecap="round" stroke-linejoin="round">
+						<line x1="18" y1="6" x2="6" y2="18"></line>
+						<line x1="6" y1="6" x2="18" y2="18"></line>
+					</svg>
 				</button>
 			</div>
-		</div>
-
-		<main class="app-shell">
-			<section class="card">
-				<form id="bulkForm">
-					<div class="field">
-						<label for="addrList">Addresses</label>
-						<textarea
-							id="addrList"
-							class="textarea"
-							rows="10"
-							placeholder="1600 Pennsylvania Ave NW, Washington, 20500&#10;123 N Main St SE, Springfield, 62704"
-						></textarea>
+			<div class="ocr-content">
+				<div class="ocr-image-section">
+					<h3>Original Image</h3>
+					<div class="ocr-image-preview">
+						<img id="ocrPreviewImage" alt="Uploaded image" />
 					</div>
-					<div class="actions">
-						<button type="submit" class="btn primary">Submit</button>
-						<button type="button" id="bulkClear" class="btn ghost">
-							Clear
-						</button>
-					</div>
-				</form>
-			</section>
-
-			<section id="bulkResults" class="card results">
-				<div class="results-head">
-					<h2>Results</h2>
-					<p>Opens addresses in your selected map providers</p>
-					<small>(pressing 'Go' copies address to clipboard)</small>
 				</div>
-				<div id="cards" class="cards"></div>
-			</section>
+				<div class="ocr-text-section">
+					<div class="ocr-text-header">
+						<h3>Extracted Text</h3>
+						<span class="ocr-confidence" id="ocrConfidence"></span>
+					</div>
+					<div class="ocr-lines" id="ocrLines"></div>
+				</div>
+			</div>
+			<div class="ocr-actions">
+				<button type="button" class="btn primary" id="ocrAccept">Accept</button>
+				<button type="button" class="btn ghost" id="ocrCancel">Cancel</button>
+			</div>
+		</div>
+	</div>
 
-			<footer class="app-footer">
-				<small>Made by Roshin Nishad</small>
-				<small class="footer-team">TCS UPS Innovation / Rapid Labs Team</small>
-			</footer>
-		</main>
+	<!-- OCR Loading Overlay -->
+	<div class="ocr-loading" id="ocrLoading">
+		<div class="ocr-loading-content">
+			<div class="ocr-spinner"></div>
+			<p>Extracting text from image...</p>
+		</div>
+	</div>
 
-		<script src="script.js"></script>
-	</body>
+	<!-- Global Tooltip for OCR -->
+	<div id="ocrGlobalTooltip" class="ocr-global-tooltip">Double-click to delete</div>
+
+	<script src="script.js"></script>
+</body>
+
 </html>

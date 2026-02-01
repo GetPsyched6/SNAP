@@ -96,9 +96,10 @@
             needsCoords: true,
             logo: "assets/logos/here.png",
             buildUrl: (addr, coords) => {
-                if (coords?.lat && coords?.lon) {
-                    return `https://wego.here.com/l/${coords.lat},${coords.lon},18?map=${coords.lat},${coords.lon},18,normal`;
-                }
+                // Commenting out coordinate prefill - it doesn't work reliably
+                // if (coords?.lat && coords?.lon) {
+                //     return `https://wego.here.com/l/${coords.lat},${coords.lon},18?map=${coords.lat},${coords.lon},18,normal`;
+                // }
                 return "https://wego.here.com/";
             }
         },
@@ -197,6 +198,7 @@
             key: "PATHO_ALLEGHENY",
             label: "PATHO – Allegheny County",
             countyMatch: "Allegheny",
+            stateMatch: ["PA"],
             kind: "arcgis-experience",
             baseUrl: "https://experience.arcgis.com/experience/68f5e4ae2f5b47b78cefcdf019e154bd/",
             canPrefill: false,
@@ -206,6 +208,7 @@
             key: "TXSTA_STLOUIS",
             label: "TXSTA – St. Louis County Maps",
             countyMatch: "St. Louis",
+            stateMatch: ["MO"],
             countyAliases: ["Saint Louis", "St Louis", "Stlouis"],
             kind: "static-page",
             baseUrl: "https://stlouiscountymo.gov/st-louis-county-departments/planning/stlco-2050/rfp-resources/maps/",
@@ -216,6 +219,7 @@
             key: "MOEAR_OFALLON",
             label: "MOEAR – St. Charles County",
             countyMatch: "St. Charles",
+            stateMatch: ["MO"],
             countyAliases: ["Saint Charles", "St Charles", "Stcharles"],
             kind: "arcgis-experience",
             baseUrl: "https://experience.arcgis.com/experience/7265e8a18aaa43d38643d0ceba127400/",
@@ -226,6 +230,7 @@
             key: "COMNT_ELPASO",
             label: "COMNT – El Paso County",
             countyMatch: "El Paso",
+            stateMatch: ["CO"],
             kind: "spatialest",
             baseUrl: "https://property.spatialest.com/co/elpaso/#/",
             canPrefill: false,
@@ -235,6 +240,7 @@
             key: "CAPAL_RIVERSIDE",
             label: "CAPAL – Riverside County",
             countyMatch: "Riverside",
+            stateMatch: ["CA"],
             kind: "custom-property-portal",
             baseUrl: "https://rivcoview.rivcoacr.org/#/Property-Search",
             canPrefill: false,
@@ -244,6 +250,7 @@
             key: "NMGAL_GALLUP",
             label: "NMGAL – City of Gallup (McKinley)",
             countyMatch: "McKinley",
+            stateMatch: ["NM"],
             kind: "arcgis-webappviewer-find",
             baseUrl: "https://cog.maps.arcgis.com/apps/webappviewer/index.html?id=67f6d4da7b284f07996d5c9381a82e05",
             canPrefill: true,
@@ -256,6 +263,7 @@
             key: "FLMGR_BROWARD",
             label: "FLMGR – Broward County",
             countyMatch: "Broward",
+            stateMatch: ["FL"],
             kind: "custom-property-portal",
             baseUrl: "https://bcpa.net/RecMenu.asp",
             canPrefill: false,
@@ -265,16 +273,86 @@
             key: "ALMOB_MOBILE",
             label: "ALMOB – Mobile County",
             countyMatch: "Mobile",
+            stateMatch: ["AL"],
             kind: "arcgis-webappviewer",
             baseUrl: "https://cityofmobile.maps.arcgis.com/apps/webappviewer/index.html?id=44b3d1ecf57d4daa919a1e40ecca0c02",
             canPrefill: false,
             buildUrl: () => "https://cityofmobile.maps.arcgis.com/apps/webappviewer/index.html?id=44b3d1ecf57d4daa919a1e40ecca0c02"
+        },
+        "FLOCA_MARION": {
+            key: "FLOCA_MARION",
+            label: "FLOCA – Marion County",
+            countyMatch: "Marion",
+            stateMatch: ["FL"],
+            kind: "custom-property-search",
+            baseUrl: "https://www.pa.marion.fl.us/PropertySearch.aspx",
+            canPrefill: false,
+            buildUrl: () => "https://www.pa.marion.fl.us/PropertySearch.aspx"
+        },
+        "NVNOV_CLARK": {
+            key: "NVNOV_CLARK",
+            label: "NVNOV – Clark County",
+            countyMatch: "Clark",
+            stateMatch: ["NV"],
+            kind: "openweb-js",
+            baseUrl: "https://maps.clarkcountynv.gov/openweb/",
+            canPrefill: true,
+            buildUrl: (shortAddr) => {
+                const addr = (shortAddr ?? "").trim();
+                const encoded = enc(addr);
+                return `https://maps.clarkcountynv.gov/openweb/?@${encoded}`;
+            }
+        },
+        "FLRIV_PALMBEACH": {
+            key: "FLRIV_PALMBEACH",
+            label: "FLRIV – Palm Beach County",
+            countyMatch: "Palm Beach",
+            stateMatch: ["FL"],
+            kind: "custom-PAPA",
+            baseUrl: "https://gis.pbcgov.org/papagis/papa.html#",
+            canPrefill: false,
+            buildUrl: () => "https://gis.pbcgov.org/papagis/papa.html#"
+        },
+        "UTVRN_UINTAH": {
+            key: "UTVRN_UINTAH",
+            label: "UTVRN – Uintah County",
+            countyMatch: "Uintah",
+            stateMatch: ["UT"],
+            kind: "custom-interactive-map",
+            baseUrl: "https://www.uintah.gov/departments/a_-_e_departments/community_development/interactive_map/index.php",
+            canPrefill: false,
+            buildUrl: () => "https://www.uintah.gov/departments/a_-_e_departments/community_development/interactive_map/index.php"
+        },
+        "UTVRN_DUCHESNE": {
+            key: "UTVRN_DUCHESNE",
+            label: "UTVRN – Duchesne County",
+            countyMatch: "Duchesne",
+            stateMatch: ["UT"],
+            kind: "arcgis-experience-builder",
+            baseUrl: "https://portal.duchesnecountygis.org/arcgis/apps/experiencebuilder/experience/?id=9a21c323718442ef8df6e3dfe5fd6a42",
+            canPrefill: false,
+            buildUrl: () => "https://portal.duchesnecountygis.org/arcgis/apps/experiencebuilder/experience/?id=9a21c323718442ef8df6e3dfe5fd6a42"
+        },
+        "UTVRN_DAGGETT": {
+            key: "UTVRN_DAGGETT",
+            label: "UTVRN – Daggett County",
+            countyMatch: "Daggett",
+            stateMatch: ["UT"],
+            kind: "arcgis-web-appbuilder",
+            baseUrl: "https://daggettutah.maps.arcgis.com/apps/webappviewer/index.html?id=7384aeb0b9ea4bec97d74d3050de8125",
+            canPrefill: true,
+            buildUrl: (shortAddr) => {
+                const addr = (shortAddr ?? "").trim();
+                const encoded = enc(addr);
+                return `https://daggettutah.maps.arcgis.com/apps/webappviewer/index.html?id=7384aeb0b9ea4bec97d74d3050de8125&find=${encoded}`;
+            }
         }
     };
 
     // County name to provider key mapping (for auto-detection)
     // Include aliases for common variations
-    const COUNTY_TO_PROVIDER = {};
+    // County name to provider keys list (one county name can map to mult providers in diff states)
+    const COUNTY_TO_PROVIDERS_LIST = {};
 
     // Helper to normalize county name for matching
     function normalizeCountyName(name) {
@@ -284,18 +362,26 @@
             .replace(/\./g, '')           // Remove periods (St. -> St)
             .replace(/saint/g, 'st')      // Saint -> St
             .replace(/\s+/g, ' ')         // Normalize spaces
+            .replace(/ county$/i, '')     // Remove 'County' suffix if present
             .trim();
     }
 
     // Build mapping with aliases
     Object.values(COUNTY_MAP_PROVIDERS).forEach(p => {
         const normalized = normalizeCountyName(p.countyMatch);
-        COUNTY_TO_PROVIDER[normalized] = p.key;
+        if (!COUNTY_TO_PROVIDERS_LIST[normalized]) {
+            COUNTY_TO_PROVIDERS_LIST[normalized] = [];
+        }
+        COUNTY_TO_PROVIDERS_LIST[normalized].push(p);
 
         // Add aliases if defined
         if (p.countyAliases) {
             p.countyAliases.forEach(alias => {
-                COUNTY_TO_PROVIDER[normalizeCountyName(alias)] = p.key;
+                const normAlias = normalizeCountyName(alias);
+                if (!COUNTY_TO_PROVIDERS_LIST[normAlias]) {
+                    COUNTY_TO_PROVIDERS_LIST[normAlias] = [];
+                }
+                COUNTY_TO_PROVIDERS_LIST[normAlias].push(p);
             });
         }
     });
@@ -309,12 +395,20 @@
         return Object.values(COUNTY_MAP_PROVIDERS).filter(p => !p.canPrefill);
     }
 
-    // Find county provider by county name
-    function findCountyProvider(countyName) {
+    // Find county provider by county name and state
+    function findCountyProvider(countyName, stateCode) {
         if (!countyName) return null;
         const normalized = normalizeCountyName(countyName);
-        const key = COUNTY_TO_PROVIDER[normalized];
-        return key ? COUNTY_MAP_PROVIDERS[key] : null;
+        const candidates = COUNTY_TO_PROVIDERS_LIST[normalized];
+
+        if (!candidates || candidates.length === 0) return null;
+
+        // If no state provided, we cannot safely verify, so return null to avoid wrong maps
+        if (!stateCode) return null;
+
+        // Filter by state - STRICT MATCH ONLY
+        const stateNorm = stateCode.trim().toUpperCase();
+        return candidates.find(p => p.stateMatch && p.stateMatch.includes(stateNorm)) || null;
     }
 
     // Extract short address (street only, no city/state/zip)
@@ -596,6 +690,377 @@
     const providersScrollWindow = document.getElementById("providersScrollWindow");
     const providersScrollLeft = document.getElementById("providersScrollLeft");
     const providersScrollRight = document.getElementById("providersScrollRight");
+
+    // OCR-related DOM elements
+    const textareaWrapper = document.getElementById("textareaWrapper");
+    const dropOverlay = document.getElementById("dropOverlay");
+    const uploadImageBtn = document.getElementById("uploadImageBtn");
+    const imageFileInput = document.getElementById("imageFileInput");
+    const ocrModal = document.getElementById("ocrModal");
+    const ocrClose = document.getElementById("ocrClose");
+    const ocrPreviewImage = document.getElementById("ocrPreviewImage");
+    const ocrConfidence = document.getElementById("ocrConfidence");
+    const ocrLines = document.getElementById("ocrLines");
+    const ocrAccept = document.getElementById("ocrAccept");
+    const ocrCancel = document.getElementById("ocrCancel");
+    const ocrLoading = document.getElementById("ocrLoading");
+    const ocrGlobalTooltip = document.getElementById("ocrGlobalTooltip");
+
+    // =========================================================================
+    // OCR IMAGE HANDLING
+    // =========================================================================
+    let currentImageDataUrl = null;
+
+    function getConfidenceClass(conf) {
+        if (conf >= 90) return 'high';
+        if (conf >= 70) return 'medium';
+        return 'low';
+    }
+
+    function imageToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Compress image to reduce payload size for API (targets ~3MB max)
+    async function compressImage(dataUrl, maxSizeMB = 3) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let { width, height } = img;
+
+                // Calculate approximate current size from base64
+                const currentSizeBytes = (dataUrl.length * 3) / 4;
+                const currentSizeMB = currentSizeBytes / (1024 * 1024);
+
+                // If already small enough, return as-is
+                if (currentSizeMB <= maxSizeMB) {
+                    resolve(dataUrl);
+                    return;
+                }
+
+                // Scale down proportionally
+                const scaleFactor = Math.sqrt(maxSizeMB / currentSizeMB);
+                width = Math.round(width * scaleFactor);
+                height = Math.round(height * scaleFactor);
+
+                // Minimum dimensions for OCR readability
+                width = Math.max(width, 800);
+                height = Math.max(height, 600);
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Try JPEG first (better compression for photos)
+                let result = canvas.toDataURL('image/jpeg', 0.85);
+
+                // If still too large, reduce quality further
+                const resultSize = (result.length * 3) / 4 / (1024 * 1024);
+                if (resultSize > maxSizeMB) {
+                    result = canvas.toDataURL('image/jpeg', 0.7);
+                }
+
+                resolve(result);
+            };
+            img.src = dataUrl;
+        });
+    }
+
+    async function callOcrApi(base64Image) {
+        const response = await fetch('/api/ocr/extract', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64Image })
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || error.error || `HTTP ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    function showOcrLoading() {
+        ocrLoading.classList.add('visible');
+    }
+
+    function hideOcrLoading() {
+        ocrLoading.classList.remove('visible');
+    }
+
+    function openOcrModal(imageDataUrl, ocrResult) {
+        currentImageDataUrl = imageDataUrl;
+
+        // Set preview image
+        ocrPreviewImage.src = imageDataUrl;
+
+        // Set overall confidence
+        const confClass = getConfidenceClass(ocrResult.overallConfidence);
+        ocrConfidence.textContent = `${ocrResult.overallConfidence.toFixed(1)}% confidence`;
+        ocrConfidence.className = `ocr-confidence ${confClass}`;
+
+        // Filter and render line-by-line confidence (remove empty/whitespace-only lines)
+        if (ocrResult.lines && ocrResult.lines.length > 0) {
+            const validLines = ocrResult.lines.filter(line => {
+                const trimmed = line.text.trim();
+                return trimmed.length > 0;
+            });
+
+            if (validLines.length > 0) {
+                ocrLines.innerHTML = validLines.map(line => {
+                    const lineConfClass = getConfidenceClass(line.confidence);
+                    return `<div class="ocr-line">
+                        <span class="ocr-line-text" contenteditable="true" spellcheck="false">${escapeHTML(line.text)}</span>
+                        <span class="ocr-line-conf ${lineConfClass}">${line.confidence.toFixed(1)}%</span>
+                        <button class="ocr-line-delete" title="Double-click to delete">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>`;
+                }).join('');
+
+                // Add event listeners for delete buttons
+                ocrLines.querySelectorAll('.ocr-line-delete').forEach(btn => {
+                    let hideTimeout;
+
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+
+                        // Calculate position
+                        const rect = btn.getBoundingClientRect();
+                        const tooltipWidth = ocrGlobalTooltip.offsetWidth || 150; // Use fallback width if hidden
+                        const tooltipHeight = ocrGlobalTooltip.offsetHeight || 30; // Use fallback height if hidden
+
+                        // Position above centered
+                        ocrGlobalTooltip.style.top = `${rect.top - tooltipHeight - 8}px`;
+                        ocrGlobalTooltip.style.left = `${rect.left + (rect.width / 2) - (tooltipWidth / 2)}px`;
+
+                        // Show tooltip
+                        ocrGlobalTooltip.classList.add('show');
+
+                        clearTimeout(hideTimeout);
+                        hideTimeout = setTimeout(() => {
+                            ocrGlobalTooltip.classList.remove('show');
+                        }, 1500);
+                    });
+
+                    btn.addEventListener('dblclick', (e) => {
+                        e.stopPropagation();
+                        clearTimeout(hideTimeout);
+                        ocrGlobalTooltip.classList.remove('show');
+
+                        const line = btn.closest('.ocr-line');
+                        line.style.transition = 'all 0.2s ease';
+                        line.style.opacity = '0';
+                        line.style.transform = 'translateX(20px)';
+                        setTimeout(() => line.remove(), 200);
+                    });
+                });
+            } else {
+                ocrLines.innerHTML = '<div class="ocr-line"><span class="ocr-line-text">No valid text detected</span></div>';
+            }
+        } else {
+            ocrLines.innerHTML = '<div class="ocr-line"><span class="ocr-line-text">No lines detected</span></div>';
+        }
+
+
+
+        // Open modal
+        ocrModal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeOcrModal() {
+        ocrModal.classList.remove('open');
+        document.body.style.overflow = '';
+        currentImageDataUrl = null;
+        ocrPreviewImage.src = '';
+        ocrLines.innerHTML = '';
+        ocrConfidence.textContent = '';
+        ocrConfidence.className = 'ocr-confidence';
+    }
+
+    async function handleImageUpload(file) {
+        // Validate file type
+        if (!file || !file.type.startsWith('image/')) {
+            alert('Please upload an image file.');
+            return;
+        }
+
+        // Limit file size (10MB max)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Image too large. Please use an image under 10MB.');
+            return;
+        }
+
+        try {
+            showOcrLoading();
+
+            // Convert to base64
+            const base64Image = await imageToBase64(file);
+
+            // Compress for API payload limits (Netlify ~6MB, we target 3MB)
+            const compressedImage = await compressImage(base64Image, 3);
+
+            // Call OCR API
+            const ocrResult = await callOcrApi(compressedImage);
+
+            hideOcrLoading();
+
+            // Open modal with results (show original image in preview)
+            openOcrModal(base64Image, ocrResult);
+
+        } catch (error) {
+            hideOcrLoading();
+            console.error('[OCR] Error:', error);
+            alert(`OCR failed: ${error.message}`);
+        }
+    }
+
+    // Drag and drop handlers
+    if (textareaWrapper) {
+        let dragCounter = 0;
+
+        textareaWrapper.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter++;
+            if (e.dataTransfer.types.includes('Files')) {
+                textareaWrapper.classList.add('dragging');
+            }
+        });
+
+        textareaWrapper.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        textareaWrapper.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter--;
+            if (dragCounter <= 0) {
+                dragCounter = 0;
+                textareaWrapper.classList.remove('dragging');
+            }
+        });
+
+        textareaWrapper.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter = 0;
+            textareaWrapper.classList.remove('dragging');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                // Only process the first image file
+                const imageFile = Array.from(files).find(f => f.type.startsWith('image/'));
+                if (imageFile) {
+                    handleImageUpload(imageFile);
+                }
+            }
+        });
+    }
+
+    // Upload button handler
+    if (uploadImageBtn && imageFileInput) {
+        uploadImageBtn.addEventListener('click', () => {
+            imageFileInput.click();
+        });
+
+        imageFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleImageUpload(file);
+            }
+            // Reset input so same file can be selected again
+            imageFileInput.value = '';
+        });
+    }
+
+    // Clipboard paste handler (Ctrl+V / Cmd+V)
+    document.addEventListener('paste', (e) => {
+        // Only handle if no input/textarea is focused (or if it's the address textarea)
+        const activeEl = document.activeElement;
+        const isTextInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+
+        // If it's a text input, only proceed if it's the address list and there's an image
+        if (isTextInput && activeEl.id !== 'addrList') {
+            return;
+        }
+
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        for (const item of items) {
+            if (item.type.startsWith('image/')) {
+                e.preventDefault();
+                const file = item.getAsFile();
+                if (file) {
+                    handleImageUpload(file);
+                }
+                break;
+            }
+        }
+    });
+
+    // OCR Modal handlers
+    if (ocrClose) {
+        ocrClose.addEventListener('click', closeOcrModal);
+    }
+
+    if (ocrCancel) {
+        ocrCancel.addEventListener('click', closeOcrModal);
+    }
+
+    if (ocrAccept) {
+        ocrAccept.addEventListener('click', () => {
+            // Collect text from all editable cards
+            const lineElements = ocrLines.querySelectorAll('.ocr-line-text[contenteditable]');
+            const lines = Array.from(lineElements)
+                .map(el => el.textContent.trim())
+                .filter(text => text.length > 0);
+
+            const text = lines.join('\n');
+
+            if (text) {
+                // Append to existing content or replace if empty
+                if (addrList.value.trim()) {
+                    addrList.value = addrList.value.trim() + '\n' + text;
+                } else {
+                    addrList.value = text;
+                }
+            }
+            closeOcrModal();
+        });
+    }
+
+    // Close OCR modal on backdrop click
+    if (ocrModal) {
+        ocrModal.addEventListener('click', (e) => {
+            if (e.target === ocrModal) {
+                closeOcrModal();
+            }
+        });
+    }
+
+    // Close OCR modal on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && ocrModal.classList.contains('open')) {
+            closeOcrModal();
+        }
+    });
 
     // =========================================================================
     // UTILITY FUNCTIONS
@@ -1283,7 +1748,9 @@
                 verdictIcon = '⚠️';
                 verdictText = 'PARTIAL MATCH';
                 // Provide more context based on matchLevel
-                if (matchLevel === 'street') {
+                if (reason === 'houseNumber-interpolated') {
+                    verdictDesc = 'Approximate location (interpolated) - address may not exist';
+                } else if (matchLevel === 'street') {
                     verdictDesc = 'Street found, but house number not confirmed';
                 } else if (matchLevel === 'houseNumber') {
                     verdictDesc = 'House number found, but low confidence score';
@@ -1336,7 +1803,8 @@
                 if (countySlab) {
                     // Try normalized response first, fallback to raw response
                     const county = here.address?.county || data?.raw?.items?.[0]?.address?.county || null;
-                    renderCountyCard(countySlab, county, address, idx);
+                    const stateCode = here.address?.stateCode || data?.raw?.items?.[0]?.address?.stateCode || null;
+                    renderCountyCard(countySlab, county, stateCode, address, idx);
                 }
             }
         } catch {
@@ -1345,9 +1813,9 @@
         }
     }
 
-    function renderCountyCard(slabEl, countyName, fullAddress, idx) {
+    function renderCountyCard(slabEl, countyName, stateCode, fullAddress, idx) {
         const shortAddress = getShortAddress(fullAddress);
-        const provider = countyName ? findCountyProvider(countyName) : null;
+        const provider = countyName ? findCountyProvider(countyName, stateCode) : null;
         const allCountyMaps = Object.values(COUNTY_MAP_PROVIDERS);
 
         if (provider) {
@@ -1370,13 +1838,13 @@
                 <div class="county-result county-detected">
                     <div class="county-header">
                         <span class="county-icon">🗺️</span>
-                        <span class="county-title">County Detected: <strong>${escapeHTML(countyName)}</strong></span>
+                        <span class="county-title">County Detected: <strong>${escapeHTML(countyName)}</strong>${provider.canPrefill ? ' (Address is prefilled)' : ''}</span>
                     </div>
                     <div class="county-action">
                         <span class="county-prompt">Open 
                             <a href="${escapeHTML(url)}" target="_blank" rel="noopener" class="county-link" title="${escapeHTML(url)}">${escapeHTML(provider.label)}</a>?
                         </span>
-                        <span class="county-note">${provider.canPrefill ? 'Address will be prefilled' : 'Copies short address to clipboard'}</span>
+                        <span class="county-note">Copies short address to clipboard</span>
                     </div>
                     <button class="btn county-go" 
                             data-county-key="${provider.key}" 
@@ -1617,9 +2085,9 @@
 
         // Get coords for providers that need them
         let coords = null;
-        try {
-            coords = await geocodeAddress(address);
-        } catch { }
+        // try {
+        //     coords = await geocodeAddress(address);
+        // } catch { }
 
         // Open enabled site providers in preferred order
         const allSiteProviders = { ...MAP_PROVIDERS, ...SITE_PROVIDERS };
