@@ -346,6 +346,45 @@
                 const encoded = enc(addr);
                 return `https://daggettutah.maps.arcgis.com/apps/webappviewer/index.html?id=7384aeb0b9ea4bec97d74d3050de8125&find=${encoded}`;
             }
+        },
+        "MOEAR_LINCOLN": {
+            key: "MOEAR_LINCOLN",
+            label: "MOEAR – Lincoln County",
+            countyMatch: "Lincoln",
+            stateMatch: ["MO"],
+            kind: "geocortex-html5",
+            baseUrl: "https://lincolngis.integritygis.com/H5/Index.html?viewer=lincoln",
+            canPrefill: false,
+            buildUrl: () => "https://lincolngis.integritygis.com/H5/Index.html?viewer=lincoln"
+        },
+        "TXLCI_GALVESTON": {
+            key: "TXLCI_GALVESTON",
+            label: "TXLCI – Galveston County",
+            countyMatch: "Galveston",
+            stateMatch: ["TX"],
+            kind: "arcgis-webappviewer-find",
+            baseUrl: "https://galvcountymaps.maps.arcgis.com/apps/webappviewer/index.html?id=d619c89878cd4c399b376b51996a7541",
+            canPrefill: true,
+            buildUrl: (shortAddr) => {
+                const addr = (shortAddr ?? "").trim();
+                const encoded = enc(addr);
+                return `https://galvcountymaps.maps.arcgis.com/apps/webappviewer/index.html?id=d619c89878cd4c399b376b51996a7541&find=${encoded}`;
+            }
+        },
+        "TXSTA_FORT_BEND": {
+            key: "TXSTA_FORT_BEND",
+            label: "TXSTA – Fort Bend County",
+            countyMatch: "Fort Bend",
+            stateMatch: ["TX"],
+            kind: "arcgis-webappviewer-find",
+            baseUrl: "https://fbcgis.maps.arcgis.com/apps/webappviewer/index.html?id=4c903babd1604c319e770336f1aaff76",
+            canPrefill: true,
+            needsFullAddress: true,
+            buildUrl: (fullAddr) => {
+                const addr = (fullAddr ?? "").trim();
+                const encoded = enc(addr);
+                return `https://fbcgis.maps.arcgis.com/apps/webappviewer/index.html?id=4c903babd1604c319e770336f1aaff76&find=${encoded}`;
+            }
         }
     };
 
@@ -1820,7 +1859,9 @@
 
         if (provider) {
             // County detected - show detected card
-            const url = provider.canPrefill ? provider.buildUrl(shortAddress) : provider.buildUrl();
+            // Some providers need full address, others work better with short address
+            const addressForUrl = (provider.canPrefill && provider.needsFullAddress) ? fullAddress : shortAddress;
+            const url = provider.canPrefill ? provider.buildUrl(addressForUrl) : provider.buildUrl();
 
             // Auto-open if enabled
             const shouldAutoOpen = provider.canPrefill
