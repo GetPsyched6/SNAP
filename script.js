@@ -1890,6 +1890,7 @@
                     <button class="btn county-go" 
                             data-county-key="${provider.key}" 
                             data-short-addr="${encodeURIComponent(shortAddress)}"
+                            data-full-addr="${encodeURIComponent(fullAddress)}"
                             data-can-prefill="${provider.canPrefill}">Go</button>
                 </div>
             `;
@@ -2053,6 +2054,7 @@
         if (countyGoBtn) {
             const providerKey = countyGoBtn.dataset.countyKey;
             const shortAddr = decodeURIComponent(countyGoBtn.dataset.shortAddr);
+            const fullAddr = decodeURIComponent(countyGoBtn.dataset.fullAddr);
             const canPrefill = countyGoBtn.dataset.canPrefill === 'true';
             const provider = COUNTY_MAP_PROVIDERS[providerKey];
 
@@ -2067,8 +2069,9 @@
                     console.warn("Clipboard copy failed:", err);
                 }
 
-                // Open the county map
-                const url = canPrefill ? provider.buildUrl(shortAddr) : provider.buildUrl();
+                // Open the county map - use full address if provider needs it
+                const addressForUrl = (canPrefill && provider.needsFullAddress) ? fullAddr : shortAddr;
+                const url = canPrefill ? provider.buildUrl(addressForUrl) : provider.buildUrl();
                 window.open(url, "_blank", "noopener");
             }
             return;
