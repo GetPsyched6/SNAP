@@ -744,6 +744,116 @@
     const ocrCancel = document.getElementById("ocrCancel");
     const ocrLoading = document.getElementById("ocrLoading");
     const ocrGlobalTooltip = document.getElementById("ocrGlobalTooltip");
+    const ocrUndoBtn = document.getElementById("ocrUndoBtn");
+    const ocrRedoBtn = document.getElementById("ocrRedoBtn");
+
+    // OCR delete undo/redo stacks
+    let ocrUndoStack = [];  // stores { element, index } of deleted lines
+    let ocrRedoStack = [];  // stores { element, index } for redo
+
+    function updateOcrUndoRedoButtons() {
+        ocrUndoBtn.disabled = ocrUndoStack.length === 0;
+        ocrRedoBtn.disabled = ocrRedoStack.length === 0;
+    }
+
+    function ocrUndoDelete() {
+        if (ocrUndoStack.length === 0) return;
+        const { element, index } = ocrUndoStack.pop();
+
+        // Restore element at original position
+        const lines = ocrLines.querySelectorAll('.ocr-line');
+        element.style.transition = 'all 0.2s ease';
+        element.style.opacity = '0';
+        element.style.transform = 'translateX(-20px)';
+
+        if (index >= lines.length) {
+            ocrLines.appendChild(element);
+        } else {
+            ocrLines.insertBefore(element, lines[index]);
+        }
+
+        // Animate in
+        requestAnimationFrame(() => {
+            element.style.opacity = '1';
+            element.style.transform = 'translateX(0)';
+        });
+
+        // Re-attach delete handlers to the restored element
+        attachDeleteHandler(element.querySelector('.ocr-line-delete'));
+
+        ocrRedoStack.push({ element, index });
+        updateOcrUndoRedoButtons();
+    }
+
+    function ocrRedoDelete() {
+        if (ocrRedoStack.length === 0) return;
+        const { element, index } = ocrRedoStack.pop();
+
+        // Animate out and remove
+        element.style.transition = 'all 0.2s ease';
+        element.style.opacity = '0';
+        element.style.transform = 'translateX(20px)';
+        setTimeout(() => {
+            if (element.parentNode) element.parentNode.removeChild(element);
+        }, 200);
+
+        ocrUndoStack.push({ element, index });
+        updateOcrUndoRedoButtons();
+    }
+
+    function attachDeleteHandler(btn) {
+        if (!btn) return;
+        let hideTimeout;
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            // Calculate position
+            const rect = btn.getBoundingClientRect();
+            const tooltipWidth = ocrGlobalTooltip.offsetWidth || 150;
+            const tooltipHeight = ocrGlobalTooltip.offsetHeight || 30;
+
+            // Position above centered
+            ocrGlobalTooltip.style.top = `${rect.top - tooltipHeight - 8}px`;
+            ocrGlobalTooltip.style.left = `${rect.left + (rect.width / 2) - (tooltipWidth / 2)}px`;
+
+            // Show tooltip
+            ocrGlobalTooltip.classList.add('show');
+
+            clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(() => {
+                ocrGlobalTooltip.classList.remove('show');
+            }, 1500);
+        });
+
+        btn.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            clearTimeout(hideTimeout);
+            ocrGlobalTooltip.classList.remove('show');
+
+            const line = btn.closest('.ocr-line');
+            // Record position before removing
+            const allLines = Array.from(ocrLines.querySelectorAll('.ocr-line'));
+            const index = allLines.indexOf(line);
+
+            // Animate out
+            line.style.transition = 'all 0.2s ease';
+            line.style.opacity = '0';
+            line.style.transform = 'translateX(20px)';
+            setTimeout(() => {
+                if (line.parentNode) line.parentNode.removeChild(line);
+            }, 200);
+
+            // Push to undo stack and clear redo stack (new action invalidates redo)
+            ocrUndoStack.push({ element: line, index });
+            ocrRedoStack = [];
+            updateOcrUndoRedoButtons();
+        });
+    }
+
+    // Wire up undo/redo buttons
+    ocrUndoBtn.addEventListener('click', ocrUndoDelete);
+    ocrRedoBtn.addEventListener('click', ocrRedoDelete);
 
     // =========================================================================
     // OCR IMAGE HANDLING
@@ -839,6 +949,11 @@
     function openOcrModal(imageDataUrl, ocrResult) {
         currentImageDataUrl = imageDataUrl;
 
+        // Reset undo/redo stacks
+        ocrUndoStack = [];
+        ocrRedoStack = [];
+        updateOcrUndoRedoButtons();
+
         // Set preview image
         ocrPreviewImage.src = imageDataUrl;
 
@@ -871,40 +986,7 @@
 
                 // Add event listeners for delete buttons
                 ocrLines.querySelectorAll('.ocr-line-delete').forEach(btn => {
-                    let hideTimeout;
-
-                    btn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-
-                        // Calculate position
-                        const rect = btn.getBoundingClientRect();
-                        const tooltipWidth = ocrGlobalTooltip.offsetWidth || 150; // Use fallback width if hidden
-                        const tooltipHeight = ocrGlobalTooltip.offsetHeight || 30; // Use fallback height if hidden
-
-                        // Position above centered
-                        ocrGlobalTooltip.style.top = `${rect.top - tooltipHeight - 8}px`;
-                        ocrGlobalTooltip.style.left = `${rect.left + (rect.width / 2) - (tooltipWidth / 2)}px`;
-
-                        // Show tooltip
-                        ocrGlobalTooltip.classList.add('show');
-
-                        clearTimeout(hideTimeout);
-                        hideTimeout = setTimeout(() => {
-                            ocrGlobalTooltip.classList.remove('show');
-                        }, 1500);
-                    });
-
-                    btn.addEventListener('dblclick', (e) => {
-                        e.stopPropagation();
-                        clearTimeout(hideTimeout);
-                        ocrGlobalTooltip.classList.remove('show');
-
-                        const line = btn.closest('.ocr-line');
-                        line.style.transition = 'all 0.2s ease';
-                        line.style.opacity = '0';
-                        line.style.transform = 'translateX(20px)';
-                        setTimeout(() => line.remove(), 200);
-                    });
+                    attachDeleteHandler(btn);
                 });
             } else {
                 ocrLines.innerHTML = '<div class="ocr-line"><span class="ocr-line-text">No valid text detected</span></div>';
