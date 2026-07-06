@@ -17,6 +17,22 @@ if (!HERE_API_KEY) {
   console.warn('[HERE] WARNING: HERE_API_KEY is not set. Geocoding will fail.');
 }
 
+// Google Maps Geocoding API configuration
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
+const GOOGLE_GEOCODE_BASE = 'https://maps.googleapis.com/maps/api/geocode/json';
+
+if (!GOOGLE_MAPS_API_KEY) {
+  console.warn('[GOOGLE] WARNING: GOOGLE_MAPS_API_KEY is not set. Geocoding will fail.');
+}
+
+// Azure Maps API configuration
+const AZURE_MAPS_API_KEY = process.env.AZURE_MAPS_API_KEY || '';
+const AZURE_GEOCODE_BASE = 'https://atlas.microsoft.com/search/address/json';
+
+if (!AZURE_MAPS_API_KEY) {
+  console.warn('[AZURE] WARNING: AZURE_MAPS_API_KEY is not set. Geocoding will fail.');
+}
+
 const ENV = (process.env.USPS_ENV || 'tem').toLowerCase();
 const OAUTH_URL = process.env.USPS_OAUTH_URL || (ENV === 'prod'
   ? 'https://apis.usps.com/oauth2/v3/token'
@@ -287,6 +303,317 @@ async function geocodeWithHere(addressLine, { limit = 1 } = {}) {
   };
 }
 
+// =====================================================================
+// Google Maps Geocoding Functions
+// =====================================================================
+
+// Classify a Google geocoding result into "exact" / "partial" / "none"
+function classifyGoogleMatch(result) {
+  if (!result) return { verdict: 'none', reason: 'no-results' };
+
+  const locationType = result.geometry?.location_type || '';
+  const types = result.types || [];
+
+  if (locationType === 'ROOFTOP') {
+    return { verdict: 'exact', reason: 'rooftop' };
+  }
+  if (locationType === 'RANGE_INTERPOLATED') {
+    return { verdict: 'partial', reason: 'range-interpolated' };
+  }
+  if (locationType === 'GEOMETRIC_CENTER') {
+    return { verdict: 'partial', reason: 'geometric-center' };
+  }
+  if (locationType === 'APPROXIMATE') {
+    if (types.includes('locality') || types.includes('postal_code')) {
+      return { verdict: 'partial', reason: 'approximate-locality' };
+    }
+    return { verdict: 'none', reason: 'approximate' };
+  }
+
+  return { verdict: 'none', reason: `unknown-location-type-${locationType || 'missing'}` };
+}
+
+// Extract an address component by type from Google's address_components array
+function getGoogleComponent(components, type) {
+  const comp = (components || []).find(c => (c.types || []).includes(type));
+  return comp || null;
+}
+
+// Compute a 0-1 confidence score based on Google response fields
+function computeGoogleScore(result) {
+  if (!result) return 0;
+
+  const locationType = result.geometry?.location_type || '';
+  const types = result.types || [];
+  const comps = result.address_components || [];
+  const partialMatch = result.partial_match === true;
+
+  // Base score from location_type
+  let score = 0;
+  if (locationType === 'ROOFTOP') score = 0.95;
+  else if (locationType === 'RANGE_INTERPOLATED') score = 0.70;
+  else if (locationType === 'GEOMETRIC_CENTER') score = 0.50;
+  else if (locationType === 'APPROXIMATE') score = 0.25;
+  else score = 0.10;
+
+  // Bonus for address component completeness (max +0.05)
+  const hasStreetNumber = comps.some(c => c.types?.includes('street_number'));
+  const hasRoute = comps.some(c => c.types?.includes('route'));
+  const hasLocality = comps.some(c => c.types?.includes('locality'));
+  const hasPostalCode = comps.some(c => c.types?.includes('postal_code'));
+  const completeness = [hasStreetNumber, hasRoute, hasLocality, hasPostalCode].filter(Boolean).length;
+  score += completeness * 0.0125; // max +0.05
+
+  // Penalty for partial_match
+  if (partialMatch) score -= 0.15;
+
+  // Bonus if result type is street_address (most specific)
+  if (types.includes('street_address')) score += 0.02;
+  if (types.includes('premise')) score += 0.02;
+
+  return Math.max(0, Math.min(1, score));
+}
+
+// Normalize a Google geocoding result into a consistent structure
+function normalizeGoogleResult(result) {
+  if (!result) return null;
+
+  const geo = result.geometry || {};
+  const loc = geo.location || {};
+  const comps = result.address_components || [];
+
+  const { verdict, reason } = classifyGoogleMatch(result);
+
+  const streetNumber = getGoogleComponent(comps, 'street_number');
+  const route = getGoogleComponent(comps, 'route');
+  const locality = getGoogleComponent(comps, 'locality');
+  const county = getGoogleComponent(comps, 'administrative_area_level_2');
+  const state = getGoogleComponent(comps, 'administrative_area_level_1');
+  const country = getGoogleComponent(comps, 'country');
+  const postalCode = getGoogleComponent(comps, 'postal_code');
+
+  return {
+    verdict,
+    reason,
+    locationType: geo.location_type || null,
+    placeId: result.place_id || null,
+    types: result.types || [],
+    partialMatch: result.partial_match === true,
+    confidenceScore: computeGoogleScore(result),
+
+    label: result.formatted_address || null,
+    address: {
+      houseNumber: streetNumber?.short_name || null,
+      street: route?.short_name || null,
+      city: locality?.long_name || null,
+      county: county?.long_name || null,
+      state: state?.long_name || null,
+      stateCode: state?.short_name || null,
+      postalCode: postalCode?.short_name || null,
+      countryCode: country?.short_name || null,
+      countryName: country?.long_name || null,
+    },
+
+    position: {
+      lat: typeof loc.lat === 'number' ? loc.lat : null,
+      lng: typeof loc.lng === 'number' ? loc.lng : null,
+    },
+  };
+}
+
+// Core Google call: addressLine -> { raw, results[], best }
+async function geocodeWithGoogle(addressLine, { limit = 1 } = {}) {
+  if (!GOOGLE_MAPS_API_KEY) {
+    throw new Error('GOOGLE_MAPS_API_KEY not configured');
+  }
+
+  const q = (addressLine || '').trim();
+  if (!q) throw new Error('Empty addressLine');
+
+  const url =
+    `${GOOGLE_GEOCODE_BASE}?address=${encodeURIComponent(q)}` +
+    `&key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}`;
+
+  const r = await fetch(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  const text = await r.text();
+  if (!r.ok) {
+    let body;
+    try { body = JSON.parse(text); } catch { body = text; }
+    const err = new Error(`Google geocode HTTP ${r.status}`);
+    err.status = r.status;
+    err.body = body;
+    throw err;
+  }
+
+  let json;
+  try { json = JSON.parse(text); } catch { throw new Error('Google geocode: invalid JSON'); }
+
+  // Google returns a status field at the top level
+  if (json.status && json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
+    const err = new Error(`Google geocode status: ${json.status}`);
+    err.status = json.status === 'REQUEST_DENIED' ? 403 : 400;
+    err.body = json;
+    throw err;
+  }
+
+  const results = Array.isArray(json.results) ? json.results.slice(0, limit) : [];
+  const first = results[0] || null;
+
+  return {
+    raw: json,
+    results,
+    best: normalizeGoogleResult(first),
+  };
+}
+
+// =====================================================================
+// Azure Maps Geocoding Functions
+// =====================================================================
+
+// Classify an Azure Maps result into "exact" / "partial" / "none"
+function classifyAzureMatch(result) {
+  if (!result) return { verdict: 'none', reason: 'no-results' };
+
+  const type = result.type || '';
+
+  if (type === 'Point Address') {
+    return { verdict: 'exact', reason: 'point-address' };
+  }
+  if (type === 'Address Range') {
+    return { verdict: 'partial', reason: 'address-range' };
+  }
+  if (type === 'Street' || type === 'Cross Street') {
+    return { verdict: 'partial', reason: `type-${type.toLowerCase().replace(' ', '-')}` };
+  }
+  if (type === 'Geography') {
+    return { verdict: 'partial', reason: 'geography-only' };
+  }
+  if (type === 'POI') {
+    return { verdict: 'partial', reason: 'poi' };
+  }
+
+  return { verdict: 'none', reason: `unknown-type-${type || 'missing'}` };
+}
+
+// Compute a 0-1 confidence score based on Azure response fields
+function computeAzureScore(result) {
+  if (!result) return 0;
+
+  const type = result.type || '';
+  const rawScore = result.score ?? 0;
+  const addr = result.address || {};
+
+  // Base: normalize Azure's score (typically 1-15+) to 0-1 range
+  let score = Math.min(rawScore / 15, 1.0) * 0.6; // Azure score contributes up to 60%
+
+  // Type-based bonus (up to +0.30)
+  if (type === 'Point Address') score += 0.30;
+  else if (type === 'Address Range') score += 0.15;
+  else if (type === 'Street' || type === 'Cross Street') score += 0.08;
+  else if (type === 'Geography') score += 0.03;
+  else if (type === 'POI') score += 0.05;
+
+  // Address completeness bonus (max +0.08)
+  const fields = [addr.streetNumber, addr.streetName, addr.municipality, addr.postalCode];
+  const completeness = fields.filter(Boolean).length;
+  score += completeness * 0.02;
+
+  // Entry points bonus (indicates precise building-level data)
+  if (Array.isArray(result.entryPoints) && result.entryPoints.length > 0) {
+    score += 0.02;
+  }
+
+  return Math.max(0, Math.min(1, score));
+}
+
+// Normalize an Azure Maps result into a consistent structure
+function normalizeAzureResult(result) {
+  if (!result) return null;
+
+  const addr = result.address || {};
+  const pos = result.position || {};
+
+  const { verdict, reason } = classifyAzureMatch(result);
+
+  return {
+    verdict,
+    reason,
+    resultType: result.type || null,
+    score: result.score ?? null,
+    confidenceScore: computeAzureScore(result),
+    id: result.id || null,
+
+    label: addr.freeformAddress || null,
+    address: {
+      houseNumber: addr.streetNumber || null,
+      street: addr.streetName || null,
+      city: addr.municipality || null,
+      county: addr.countrySecondarySubdivision || null,
+      state: addr.countrySubdivisionName || null,
+      stateCode: addr.countrySubdivisionCode || null,
+      postalCode: addr.postalCode || null,
+      countryCode: addr.countryCode || null,
+      countryName: addr.country || null,
+    },
+
+    position: {
+      lat: typeof pos.lat === 'number' ? pos.lat : null,
+      lng: typeof pos.lon === 'number' ? pos.lon : null,
+    },
+
+    entryPoints: Array.isArray(result.entryPoints)
+      ? result.entryPoints.map(ep => ({ type: ep.type, lat: ep.position?.lat, lng: ep.position?.lon }))
+      : [],
+  };
+}
+
+// Core Azure call: addressLine -> { raw, results[], best }
+async function geocodeWithAzure(addressLine, { limit = 1 } = {}) {
+  if (!AZURE_MAPS_API_KEY) {
+    throw new Error('AZURE_MAPS_API_KEY not configured');
+  }
+
+  const q = (addressLine || '').trim();
+  if (!q) throw new Error('Empty addressLine');
+
+  const url =
+    `${AZURE_GEOCODE_BASE}?api-version=1.0` +
+    `&query=${encodeURIComponent(q)}` +
+    `&limit=${encodeURIComponent(limit)}` +
+    `&subscription-key=${encodeURIComponent(AZURE_MAPS_API_KEY)}`;
+
+  const r = await fetch(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  const text = await r.text();
+  if (!r.ok) {
+    let body;
+    try { body = JSON.parse(text); } catch { body = text; }
+    const err = new Error(`Azure Maps geocode HTTP ${r.status}`);
+    err.status = r.status;
+    err.body = body;
+    throw err;
+  }
+
+  let json;
+  try { json = JSON.parse(text); } catch { throw new Error('Azure Maps geocode: invalid JSON'); }
+
+  const results = Array.isArray(json.results) ? json.results.slice(0, limit) : [];
+  const first = results[0] || null;
+
+  return {
+    raw: json,
+    results,
+    best: normalizeAzureResult(first),
+  };
+}
+
 // Original endpoint: parse with AI then call USPS
 app.post('/api/usps/standardize-line', async (req, res) => {
   try {
@@ -481,6 +808,110 @@ app.post('/api/here/geocode-line', async (req, res) => {
     return res
       .status(500)
       .json({ error: 'here-geocode-failed', message: String(err.message || err) });
+  }
+});
+
+// =====================================================================
+// Google Maps Geocoding Endpoint
+// =====================================================================
+app.post('/api/google/geocode-line', async (req, res) => {
+  try {
+    const { addressLine } = req.body || {};
+    if (!addressLine || typeof addressLine !== 'string') {
+      return res.status(400).json({ error: 'addressLine required' });
+    }
+
+    const data = await geocodeWithGoogle(addressLine, { limit: 1 });
+
+    if (!data.best) {
+      return res.json({
+        input: { addressLine },
+        google: {
+          verdict: 'none',
+          reason: 'no-results',
+          locationType: null,
+          label: null,
+          address: null,
+          position: null,
+        },
+        raw: data.raw,
+      });
+    }
+
+    return res.json({
+      input: { addressLine },
+      google: data.best,
+      raw: data.raw,
+    });
+  } catch (err) {
+    console.error('[GOOGLE] /api/google/geocode-line error:', err.status, err.body || err.message);
+
+    if (err.status) {
+      return res
+        .status(typeof err.status === 'number' ? err.status : 500)
+        .json({
+          error: 'google-geocode-failed',
+          status: err.status,
+          body: err.body || null,
+        });
+    }
+
+    return res
+      .status(500)
+      .json({ error: 'google-geocode-failed', message: String(err.message || err) });
+  }
+});
+
+// =====================================================================
+// Azure Maps Geocoding Endpoint
+// =====================================================================
+app.post('/api/azure/geocode-line', async (req, res) => {
+  try {
+    const { addressLine } = req.body || {};
+    if (!addressLine || typeof addressLine !== 'string') {
+      return res.status(400).json({ error: 'addressLine required' });
+    }
+
+    const data = await geocodeWithAzure(addressLine, { limit: 1 });
+
+    if (!data.best) {
+      return res.json({
+        input: { addressLine },
+        azure: {
+          verdict: 'none',
+          reason: 'no-results',
+          resultType: null,
+          score: null,
+          label: null,
+          address: null,
+          position: null,
+          entryPoints: [],
+        },
+        raw: data.raw,
+      });
+    }
+
+    return res.json({
+      input: { addressLine },
+      azure: data.best,
+      raw: data.raw,
+    });
+  } catch (err) {
+    console.error('[AZURE] /api/azure/geocode-line error:', err.status, err.body || err.message);
+
+    if (err.status) {
+      return res
+        .status(typeof err.status === 'number' ? err.status : 500)
+        .json({
+          error: 'azure-geocode-failed',
+          status: err.status,
+          body: err.body || null,
+        });
+    }
+
+    return res
+      .status(500)
+      .json({ error: 'azure-geocode-failed', message: String(err.message || err) });
   }
 });
 

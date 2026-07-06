@@ -189,6 +189,8 @@
 
 [data-theme="alt"] .usps-slab,
 [data-theme="alt"] .here-slab,
+[data-theme="alt"] .google-slab,
+[data-theme="alt"] .azure-slab,
 [data-theme="alt"] .county-slab {
 	background: linear-gradient(
 		135deg,
@@ -201,6 +203,8 @@
 
 [data-theme="alt"] .usps-slab.ok,
 [data-theme="alt"] .here-slab.ok,
+[data-theme="alt"] .google-slab.ok,
+[data-theme="alt"] .azure-slab.ok,
 [data-theme="alt"] .county-slab.ok {
 	border-color: #85d6c8;
 	background: linear-gradient(
@@ -212,6 +216,8 @@
 
 [data-theme="alt"] .usps-slab.warn,
 [data-theme="alt"] .here-slab.warn,
+[data-theme="alt"] .google-slab.warn,
+[data-theme="alt"] .azure-slab.warn,
 [data-theme="alt"] .county-slab.warn {
 	border-color: #ffc97d;
 	background: linear-gradient(
@@ -223,6 +229,8 @@
 
 [data-theme="alt"] .usps-slab.err,
 [data-theme="alt"] .here-slab.err,
+[data-theme="alt"] .google-slab.err,
+[data-theme="alt"] .azure-slab.err,
 [data-theme="alt"] .county-slab.err {
 	border-color: #ff9faa;
 	background: linear-gradient(
@@ -234,6 +242,8 @@
 
 [data-theme="alt"] .usps-slab.info,
 [data-theme="alt"] .here-slab.info,
+[data-theme="alt"] .google-slab.info,
+[data-theme="alt"] .azure-slab.info,
 [data-theme="alt"] .county-slab.info {
 	border-color: #91cef2;
 	background: linear-gradient(
@@ -1369,6 +1379,64 @@ body {
 	align-items: center;
 }
 
+.btn.card-delete {
+	flex-shrink: 0;
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid transparent;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--muted);
+	cursor: pointer;
+	opacity: 0.4;
+	transition: all 0.2s ease;
+}
+
+.btn.card-delete:hover {
+	opacity: 1;
+	color: var(--error);
+	background: rgba(255, 107, 107, 0.1);
+	border-color: rgba(255, 107, 107, 0.3);
+}
+
+[data-theme="alt"] .btn.card-delete:hover {
+	color: #ff9faa;
+	background: rgba(255, 159, 170, 0.1);
+	border-color: rgba(255, 159, 170, 0.3);
+}
+
+.btn.card-drag-handle {
+	flex-shrink: 0;
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid transparent;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--muted);
+	cursor: grab;
+	opacity: 0.4;
+	transition: all 0.2s ease;
+}
+
+.btn.card-drag-handle:hover {
+	opacity: 1;
+	background: rgba(255, 255, 255, 0.06);
+	border-color: var(--border);
+}
+
+.card-line.dragging {
+	opacity: 0.5;
+	cursor: grabbing;
+}
+
 .addr {
 	color: var(--text);
 	word-break: break-word;
@@ -1384,6 +1452,8 @@ body {
    ========================================================================= */
 .usps-slab,
 .here-slab,
+.google-slab,
+.azure-slab,
 .county-slab {
 	margin-top: 10px;
 	padding: 12px 14px;
@@ -1398,6 +1468,8 @@ body {
 
 [data-theme="light"] .usps-slab,
 [data-theme="light"] .here-slab,
+[data-theme="light"] .google-slab,
+[data-theme="light"] .azure-slab,
 [data-theme="light"] .county-slab {
 	background: rgba(0, 131, 143, 0.05);
 }
@@ -1421,6 +1493,8 @@ body {
 
 .usps-slab.ok,
 .here-slab.ok,
+.google-slab.ok,
+.azure-slab.ok,
 .county-slab.ok {
 	border-color: var(--success);
 	background: rgba(0, 201, 167, 0.08);
@@ -1428,6 +1502,8 @@ body {
 
 .usps-slab.warn,
 .here-slab.warn,
+.google-slab.warn,
+.azure-slab.warn,
 .county-slab.warn {
 	border-color: var(--warning);
 	background: rgba(245, 166, 35, 0.08);
@@ -1435,6 +1511,8 @@ body {
 
 .usps-slab.err,
 .here-slab.err,
+.google-slab.err,
+.azure-slab.err,
 .county-slab.err {
 	border-color: var(--error);
 	background: rgba(255, 107, 107, 0.08);
@@ -1442,6 +1520,8 @@ body {
 
 .usps-slab.info,
 .here-slab.info,
+.google-slab.info,
+.azure-slab.info,
 .county-slab.info {
 	border-color: var(--accent);
 	background: rgba(0, 188, 212, 0.08);
@@ -1449,6 +1529,8 @@ body {
 
 .usps-slab.loading,
 .here-slab.loading,
+.google-slab.loading,
+.azure-slab.loading,
 .county-slab.loading {
 	border-color: var(--accent);
 	background: rgba(0, 212, 224, 0.06);
@@ -1704,7 +1786,9 @@ body {
 }
 
 .usps-slab.expanded .chevron-icon,
-.here-slab.expanded .chevron-icon {
+.here-slab.expanded .chevron-icon,
+.google-slab.expanded .chevron-icon,
+.azure-slab.expanded .chevron-icon {
 	transform: rotate(90deg);
 }
 
@@ -2042,6 +2126,8 @@ body {
 
 	.usps-slab,
 	.here-slab,
+	.google-slab,
+	.azure-slab,
 	.county-slab {
 		padding: 10px 12px;
 		font-size: 12px;
@@ -2050,7 +2136,9 @@ body {
 	}
 
 	.usps-result,
-	.here-result {
+	.here-result,
+	.google-result,
+	.azure-result {
 		line-height: 1.5;
 	}
 
@@ -2584,6 +2672,31 @@ body {
 }
 
 .ocr-global-tooltip.show {
+	opacity: 1;
+	visibility: visible;
+	transform: translateY(0);
+}
+
+.card-delete-tooltip {
+	position: fixed;
+	background: var(--card-bg);
+	color: var(--error);
+	padding: 6px 12px;
+	border-radius: 8px;
+	font-size: 13px;
+	font-weight: 600;
+	white-space: nowrap;
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+	border: 1px solid var(--error);
+	box-shadow: 0 4px 16px rgba(255, 107, 107, 0.2);
+	z-index: 10000;
+	transition: opacity 0.2s ease, transform 0.2s ease;
+	transform: translateY(4px);
+}
+
+.card-delete-tooltip.show {
 	opacity: 1;
 	visibility: visible;
 	transform: translateY(0);

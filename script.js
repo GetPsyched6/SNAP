@@ -175,6 +175,18 @@
             label: "HERE Geocoding API",
             logo: "assets/logos/here.png",
             type: "api"
+        },
+        "google-api": {
+            id: "google-api",
+            label: "Google Geocoding API",
+            logo: "assets/logos/google-maps.png",
+            type: "api"
+        },
+        "azure-api": {
+            id: "azure-api",
+            label: "Azure Maps API",
+            logo: "assets/logos/bing-maps.png",
+            type: "api"
         }
     };
 
@@ -1322,6 +1334,8 @@
                 <div class="provider-list">
                     ${renderProviderToggle(API_PROVIDERS["usps-api"], settings.apis.includes("usps-api"), "api")}
                     ${renderProviderToggle(API_PROVIDERS["here-api"], settings.apis.includes("here-api"), "api")}
+                    ${renderProviderToggle(API_PROVIDERS["google-api"], settings.apis.includes("google-api"), "api")}
+                    ${renderProviderToggle(API_PROVIDERS["azure-api"], settings.apis.includes("azure-api"), "api")}
                 </div>
             </div>
 
@@ -1614,19 +1628,40 @@
     function makeCard(address, idx) {
         const wrap = document.createElement("div");
         wrap.className = "card-line";
+        wrap.id = `card-${idx}`;
 
         const uspsEnabled = settings.apis.includes("usps-api");
         const hereEnabled = settings.apis.includes("here-api");
+        const googleEnabled = settings.apis.includes("google-api");
+        const azureEnabled = settings.apis.includes("azure-api");
         const countyEnabled = settings.countyMaps.enabled;
 
         wrap.innerHTML = `
             <div class="line-row">
                 <span class="addr">${escapeHTML(address)}</span>
                 <div class="spacer"></div>
+                <button class="btn card-drag-handle" aria-label="Drag to reorder" title="Drag to reorder">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <circle cx="8" cy="5" r="1.6"></circle>
+                        <circle cx="8" cy="12" r="1.6"></circle>
+                        <circle cx="8" cy="19" r="1.6"></circle>
+                        <circle cx="16" cy="5" r="1.6"></circle>
+                        <circle cx="16" cy="12" r="1.6"></circle>
+                        <circle cx="16" cy="19" r="1.6"></circle>
+                    </svg>
+                </button>
+                <button class="btn card-delete" data-card-id="card-${idx}" aria-label="Remove card" title="Remove card">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
                 <button class="btn go" data-addr="${encodeURIComponent(address)}">Go</button>
             </div>
             ${uspsEnabled ? `<div class="usps-slab" id="usps-${idx}">USPS: (pending)</div>` : ''}
             ${hereEnabled ? `<div class="here-slab" id="here-${idx}">HERE: (pending)</div>` : ''}
+            ${googleEnabled ? `<div class="google-slab" id="google-${idx}">Google: (pending)</div>` : ''}
+            ${azureEnabled ? `<div class="azure-slab" id="azure-${idx}">Azure: (pending)</div>` : ''}
             ${countyEnabled ? `<div class="county-slab" id="county-${idx}">County: (waiting for HERE data)</div>` : ''}
         `;
         return wrap;
@@ -1716,6 +1751,30 @@
         return JSON.parse(text);
     }
 
+    async function googleGeocodeLine(addressLine, onProgress) {
+        if (onProgress) onProgress('Google: Geocoding...');
+
+        const r = await fetch(`${API_BASE}/google/geocode-line`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ addressLine })
+        });
+        const text = await r.text();
+        return JSON.parse(text);
+    }
+
+    async function azureGeocodeLine(addressLine, onProgress) {
+        if (onProgress) onProgress('Azure: Geocoding...');
+
+        const r = await fetch(`${API_BASE}/azure/geocode-line`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ addressLine })
+        });
+        const text = await r.text();
+        return JSON.parse(text);
+    }
+
     async function geocodeAddress(q) {
         const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(q)}`, {
             headers: { "Accept": "application/json" }
@@ -1739,6 +1798,8 @@
             const cr = info.carrierRoute ?? 'N/A';
             const biz = info.business ?? 'N/A';
             const vac = info.vacant ?? 'N/A';
+            const dp = info.deliveryPoint ?? 'N/A';
+            const cmra = info.DPVCMRA ?? 'N/A';
 
             if (line1 && zip) {
                 const detailsData = payload?.result || {};
@@ -1747,7 +1808,7 @@
                     <div class="slab-header">
                         <div class="slab-content">
                             <div>USPS: ${escapeHTML(line1)} ${escapeHTML(zip)}</div>
-                            <div class="usps-meta">DPV:${dpv} ⋅ CR:${cr} ⋅ Biz:${biz} ⋅ Vacant:${vac}</div>
+                            <div class="usps-meta">DPV:${dpv} ⋅ DP:${dp} ⋅ CMRA:${cmra} ⋅ CR:${cr} ⋅ Biz:${biz} ⋅ Vacant:${vac}</div>
                         </div>
                         <div class="slab-chevron">
                             <span class="chevron-icon">›</span>
@@ -2061,6 +2122,182 @@
         setSlabState(slabEl, 'err');
     }
 
+    // =========================================================================
+    // GOOGLE MAPS RENDERING
+    // =========================================================================
+    function renderGoogleSuccess(data, slabEl, idx) {
+        try {
+            const google = data?.google || {};
+            const verdict = google.verdict || 'none';
+            const reason = google.reason || '';
+            const locationType = google.locationType || 'N/A';
+            const label = google.label || '(no label)';
+            const pos = google.position || {};
+            const lat = pos.lat !== null ? pos.lat.toFixed(6) : 'N/A';
+            const lng = pos.lng !== null ? pos.lng.toFixed(6) : 'N/A';
+
+            let verdictClass = '';
+            let verdictIcon = '❓';
+            let verdictText = '';
+            let verdictDesc = '';
+
+            if (verdict === 'exact') {
+                verdictClass = 'verdict-exact';
+                verdictIcon = '✅';
+                verdictText = 'ADDRESS FOUND';
+                verdictDesc = 'Rooftop-level match — high confidence';
+            } else if (verdict === 'partial') {
+                verdictClass = 'verdict-partial';
+                verdictIcon = '⚠️';
+                verdictText = 'PARTIAL MATCH';
+                if (reason === 'range-interpolated') {
+                    verdictDesc = 'Approximate location (interpolated between known addresses)';
+                } else if (reason === 'geometric-center') {
+                    verdictDesc = 'Geometric center of a feature (road, area)';
+                } else if (reason === 'approximate-locality') {
+                    verdictDesc = 'Approximate match at locality/postal code level';
+                } else {
+                    verdictDesc = 'Address partially matched, verify manually';
+                }
+            } else {
+                verdictClass = 'verdict-none';
+                verdictIcon = '❌';
+                verdictText = 'NOT FOUND';
+                verdictDesc = 'Address could not be verified via Google Geocoding';
+            }
+
+            const detailsData = data?.raw?.results || [];
+            const partialMatch = (detailsData[0]?.partial_match === true) ? 'Yes' : 'No';
+            const scorePct = google.confidenceScore !== undefined ? (google.confidenceScore * 100).toFixed(0) + '%' : 'N/A';
+
+            slabEl.innerHTML = `
+                <div class="google-result ${verdictClass}">
+                    <div class="slab-header">
+                        <div class="slab-content">
+                            <div class="google-verdict">Google: ${verdictIcon} <strong>${verdictText}</strong></div>
+                            <div class="google-desc">${escapeHTML(verdictDesc)}</div>
+                            <div class="google-label">${escapeHTML(label)}</div>
+                            <div class="google-meta">
+                                Location: ${escapeHTML(locationType)} ⋅ Score: ${escapeHTML(scorePct)} ⋅ Partial: ${escapeHTML(partialMatch)} ⋅ Coords: ${escapeHTML(lat)}, ${escapeHTML(lng)}
+                            </div>
+                        </div>
+                        <div class="slab-chevron">
+                            <span class="chevron-icon">›</span>
+                        </div>
+                    </div>
+                    <div class="slab-details">
+                        <pre class="json-view">${formatJSON(detailsData)}</pre>
+                    </div>
+                </div>
+            `;
+
+            if (verdict === 'exact') {
+                setSlabState(slabEl, 'ok');
+            } else if (verdict === 'partial') {
+                setSlabState(slabEl, 'warn');
+            } else {
+                setSlabState(slabEl, 'err');
+            }
+        } catch {
+            slabEl.textContent = 'Google: (parse error)';
+            setSlabState(slabEl, 'err');
+        }
+    }
+
+    function renderGoogleError(error, slabEl, idx) {
+        slabEl.innerHTML = `<div class="error-header">⚠️ Google: ${escapeHTML(error)}</div>`;
+        setSlabState(slabEl, 'err');
+    }
+
+    // =========================================================================
+    // AZURE MAPS RENDERING
+    // =========================================================================
+    function renderAzureSuccess(data, slabEl, idx) {
+        try {
+            const azure = data?.azure || {};
+            const verdict = azure.verdict || 'none';
+            const reason = azure.reason || '';
+            const resultType = azure.resultType || 'N/A';
+            const score = azure.score !== null ? azure.score.toFixed(2) : 'N/A';
+            const label = azure.label || '(no label)';
+            const pos = azure.position || {};
+            const lat = pos.lat !== null ? pos.lat.toFixed(6) : 'N/A';
+            const lng = pos.lng !== null ? pos.lng.toFixed(6) : 'N/A';
+
+            let verdictClass = '';
+            let verdictIcon = '❓';
+            let verdictText = '';
+            let verdictDesc = '';
+
+            if (verdict === 'exact') {
+                verdictClass = 'verdict-exact';
+                verdictIcon = '✅';
+                verdictText = 'ADDRESS FOUND';
+                verdictDesc = 'Point Address — exact match with high confidence';
+            } else if (verdict === 'partial') {
+                verdictClass = 'verdict-partial';
+                verdictIcon = '⚠️';
+                verdictText = 'PARTIAL MATCH';
+                if (reason === 'address-range') {
+                    verdictDesc = 'Address range match — approximate interpolation';
+                } else if (reason === 'type-street' || reason === 'type-cross-street') {
+                    verdictDesc = 'Street-level match only, specific address not confirmed';
+                } else if (reason === 'geography-only') {
+                    verdictDesc = 'Geographic area match only (city, region)';
+                } else if (reason === 'poi') {
+                    verdictDesc = 'Matched as a point of interest';
+                } else {
+                    verdictDesc = 'Address partially matched, verify manually';
+                }
+            } else {
+                verdictClass = 'verdict-none';
+                verdictIcon = '❌';
+                verdictText = 'NOT FOUND';
+                verdictDesc = 'Address could not be verified via Azure Maps';
+            }
+
+            const detailsData = data?.raw?.results || [];
+            const confPct = azure.confidenceScore !== undefined ? (azure.confidenceScore * 100).toFixed(0) + '%' : 'N/A';
+
+            slabEl.innerHTML = `
+                <div class="azure-result ${verdictClass}">
+                    <div class="slab-header">
+                        <div class="slab-content">
+                            <div class="azure-verdict">Azure: ${verdictIcon} <strong>${verdictText}</strong></div>
+                            <div class="azure-desc">${escapeHTML(verdictDesc)}</div>
+                            <div class="azure-label">${escapeHTML(label)}</div>
+                            <div class="azure-meta">
+                                Type: ${escapeHTML(resultType)} ⋅ Score: ${escapeHTML(confPct)} ⋅ Coords: ${escapeHTML(lat)}, ${escapeHTML(lng)}
+                            </div>
+                        </div>
+                        <div class="slab-chevron">
+                            <span class="chevron-icon">›</span>
+                        </div>
+                    </div>
+                    <div class="slab-details">
+                        <pre class="json-view">${formatJSON(detailsData)}</pre>
+                    </div>
+                </div>
+            `;
+
+            if (verdict === 'exact') {
+                setSlabState(slabEl, 'ok');
+            } else if (verdict === 'partial') {
+                setSlabState(slabEl, 'warn');
+            } else {
+                setSlabState(slabEl, 'err');
+            }
+        } catch {
+            slabEl.textContent = 'Azure: (parse error)';
+            setSlabState(slabEl, 'err');
+        }
+    }
+
+    function renderAzureError(error, slabEl, idx) {
+        slabEl.innerHTML = `<div class="error-header">⚠️ Azure: ${escapeHTML(error)}</div>`;
+        setSlabState(slabEl, 'err');
+    }
+
     function getRetryFieldsFromForm(formEl) {
         const get = (name) => formEl.querySelector(`input[name="${name}"]`)?.value?.trim() || '';
         const streetAddress = [get('number'), get('prefix'), get('name'), get('type'), get('suffix')]
@@ -2074,8 +2311,50 @@
     }
 
     // =========================================================================
-    // EVENT HANDLERS
+    // CARD DRAG-TO-REORDER
     // =========================================================================
+    let draggingCard = null;
+
+    cards.addEventListener("mousedown", (e) => {
+        const handle = e.target.closest(".card-drag-handle");
+        if (!handle) return;
+        const card = handle.closest(".card-line");
+        if (card) card.draggable = true;
+    });
+
+    cards.addEventListener("mouseup", () => {
+        cards.querySelectorAll(".card-line[draggable='true']").forEach(c => {
+            if (c !== draggingCard) c.draggable = false;
+        });
+    });
+
+    cards.addEventListener("dragstart", (e) => {
+        const card = e.target.closest(".card-line");
+        if (!card) return;
+        draggingCard = card;
+        card.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", card.id);
+    });
+
+    cards.addEventListener("dragover", (e) => {
+        if (!draggingCard) return;
+        e.preventDefault();
+        const target = e.target.closest(".card-line");
+        if (!target || target === draggingCard) return;
+        const rect = target.getBoundingClientRect();
+        const before = e.clientY < rect.top + rect.height / 2;
+        cards.insertBefore(draggingCard, before ? target : target.nextSibling);
+    });
+
+    cards.addEventListener("dragend", () => {
+        if (draggingCard) {
+            draggingCard.classList.remove("dragging");
+            draggingCard.draggable = false;
+        }
+        draggingCard = null;
+    });
+
     bulkForm.addEventListener("submit", (e) => {
         e.preventDefault();
         const lines = addrList.value
@@ -2093,10 +2372,30 @@
     });
 
     cards.addEventListener("click", async (e) => {
+        // Handle card delete button — first click shows tooltip
+        const deleteBtn = e.target.closest(".card-delete");
+        if (deleteBtn) {
+            e.stopPropagation();
+            const tooltip = document.getElementById('cardDeleteTooltip');
+            if (tooltip) {
+                const rect = deleteBtn.getBoundingClientRect();
+                const tooltipWidth = tooltip.offsetWidth || 160;
+                const tooltipHeight = tooltip.offsetHeight || 30;
+                tooltip.style.top = `${rect.top - tooltipHeight - 8}px`;
+                tooltip.style.left = `${rect.left + (rect.width / 2) - (tooltipWidth / 2)}px`;
+                tooltip.classList.add('show');
+                clearTimeout(tooltip._hideTimeout);
+                tooltip._hideTimeout = setTimeout(() => {
+                    tooltip.classList.remove('show');
+                }, 1500);
+            }
+            return;
+        }
+
         // Handle slab header click for expand/collapse
         const slabHeader = e.target.closest(".slab-header");
         if (slabHeader) {
-            const slab = slabHeader.closest(".usps-slab, .here-slab");
+            const slab = slabHeader.closest(".usps-slab, .here-slab, .google-slab, .azure-slab");
             if (slab) {
                 toggleSlabDetails(slab);
             }
@@ -2309,6 +2608,87 @@
             if (countySlab) {
                 renderCountyCardError(countySlab, address, idx);
             }
+        }
+
+        // Run Google API if enabled
+        const googleSlab = document.getElementById(`google-${idx}`);
+        if (settings.apis.includes("google-api") && googleSlab) {
+            showLoadingState(googleSlab, 'Google: Starting...');
+            (async () => {
+                try {
+                    const data = await googleGeocodeLine(address, (msg) => {
+                        showLoadingState(googleSlab, msg);
+                    });
+
+                    if (data.error) {
+                        renderGoogleError(data.error, googleSlab, idx);
+                    } else if (data.google) {
+                        renderGoogleSuccess(data, googleSlab, idx);
+                    } else {
+                        googleSlab.textContent = 'Google: (no result)';
+                        setSlabState(googleSlab, 'err');
+                    }
+                } catch (err) {
+                    googleSlab.textContent = `Google: (error) ${err.message}`;
+                    setSlabState(googleSlab, 'err');
+                }
+            })();
+        }
+
+        // Run Azure API if enabled
+        const azureSlab = document.getElementById(`azure-${idx}`);
+        if (settings.apis.includes("azure-api") && azureSlab) {
+            showLoadingState(azureSlab, 'Azure: Starting...');
+            (async () => {
+                try {
+                    const data = await azureGeocodeLine(address, (msg) => {
+                        showLoadingState(azureSlab, msg);
+                    });
+
+                    if (data.error) {
+                        renderAzureError(data.error, azureSlab, idx);
+                    } else if (data.azure) {
+                        renderAzureSuccess(data, azureSlab, idx);
+                    } else {
+                        azureSlab.textContent = 'Azure: (no result)';
+                        setSlabState(azureSlab, 'err');
+                    }
+                } catch (err) {
+                    azureSlab.textContent = `Azure: (error) ${err.message}`;
+                    setSlabState(azureSlab, 'err');
+                }
+            })();
+        }
+    });
+
+    // Double-click to actually delete the card
+    cards.addEventListener("dblclick", (e) => {
+        const deleteBtn = e.target.closest(".card-delete");
+        if (!deleteBtn) return;
+        e.stopPropagation();
+
+        const tooltip = document.getElementById('cardDeleteTooltip');
+        if (tooltip) {
+            clearTimeout(tooltip._hideTimeout);
+            tooltip.classList.remove('show');
+        }
+
+        const cardId = deleteBtn.dataset.cardId;
+        const card = document.getElementById(cardId);
+        if (card) {
+            card.style.transition = 'opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease, margin 0.3s ease, padding 0.3s ease';
+            card.style.opacity = '0';
+            card.style.transform = 'translateX(30px)';
+            card.style.maxHeight = card.scrollHeight + 'px';
+            requestAnimationFrame(() => {
+                card.style.maxHeight = '0';
+                card.style.marginTop = '0';
+                card.style.marginBottom = '0';
+                card.style.paddingTop = '0';
+                card.style.paddingBottom = '0';
+                card.style.overflow = 'hidden';
+            });
+            setTimeout(() => card.remove(), 350);
         }
     });
 
