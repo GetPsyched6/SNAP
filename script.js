@@ -2016,7 +2016,8 @@
                 if (!provider.canPrefill && settings.countyMaps.autoCopyShortAddress) {
                     navigator.clipboard.writeText(shortAddress).catch(() => { });
                 }
-                window.open(url, "_blank", "noopener");
+                openProviderTab(`county-${provider.key}`, url);
+                moveCloseTabsBtnToCard(slabEl.closest(".card-line"));
             }
             slabEl.innerHTML = `
                 <div class="county-result county-detected">
@@ -2311,6 +2312,67 @@
     }
 
     // =========================================================================
+    // PROVIDER TAB MANAGEMENT
+    // Named tabs: one per provider, reused on every Go press instead of
+    // opening fresh tabs. Handles are kept so "Close opened tabs" works.
+    // =========================================================================
+    const providerTabs = new Map();
+    const closeTabsBtn = document.getElementById("closeTabsBtn");
+    const resultsHead = document.querySelector(".results-head");
+
+    // The button lives in the results header but migrates into the card
+    // whose Go was last pressed, so it sits next to the action that opened
+    // the tabs. It must be re-homed before any card is removed from the DOM.
+    function moveCloseTabsBtnToCard(cardEl) {
+        if (!closeTabsBtn || !cardEl) return;
+        const row = cardEl.querySelector(".line-row");
+        if (row) row.insertBefore(closeTabsBtn, row.querySelector(".card-drag-handle"));
+    }
+
+    function homeCloseTabsBtn() {
+        if (closeTabsBtn && resultsHead && closeTabsBtn.parentElement !== resultsHead) {
+            resultsHead.appendChild(closeTabsBtn);
+        }
+    }
+
+    function openProviderTab(key, url) {
+        const name = `snap-${key}`;
+        const win = window.open(url, name);
+        if (win) {
+            providerTabs.set(name, win);
+            updateCloseTabsBtn();
+        }
+        return win;
+    }
+
+    function openTabsCount() {
+        let n = 0;
+        providerTabs.forEach(win => { if (win && !win.closed) n++; });
+        return n;
+    }
+
+    function updateCloseTabsBtn() {
+        if (!closeTabsBtn) return;
+        const n = openTabsCount();
+        closeTabsBtn.hidden = n === 0;
+        closeTabsBtn.textContent = `Close opened tabs (${n})`;
+    }
+
+    if (closeTabsBtn) {
+        closeTabsBtn.addEventListener("click", () => {
+            providerTabs.forEach(win => {
+                if (win && !win.closed) {
+                    try { win.close(); } catch { /* handle may be dead */ }
+                }
+            });
+            providerTabs.clear();
+            updateCloseTabsBtn();
+        });
+        // Tabs the user closes by hand should drop off the count
+        setInterval(updateCloseTabsBtn, 2000);
+    }
+
+    // =========================================================================
     // CARD DRAG-TO-REORDER
     // =========================================================================
     let draggingCard = null;
@@ -2362,12 +2424,14 @@
             .map(s => s.trim())
             .filter(Boolean);
 
+        homeCloseTabsBtn();
         cards.innerHTML = "";
         lines.forEach((line, i) => cards.appendChild(makeCard(line, i)));
     });
 
     bulkClear.addEventListener("click", () => {
         addrList.value = "";
+        homeCloseTabsBtn();
         cards.innerHTML = "";
     });
 
@@ -2453,7 +2517,8 @@
                 // Open the county map - use full address if provider needs it
                 const addressForUrl = (canPrefill && provider.needsFullAddress) ? fullAddr : shortAddr;
                 const url = canPrefill ? provider.buildUrl(addressForUrl) : provider.buildUrl();
-                window.open(url, "_blank", "noopener");
+                openProviderTab(`county-${providerKey}`, url);
+                moveCloseTabsBtnToCard(countyGoBtn.closest(".card-line"));
             }
             return;
         }
@@ -2480,7 +2545,8 @@
 
                     // Open the county map
                     const url = provider.canPrefill ? provider.buildUrl(shortAddr) : provider.buildUrl();
-                    window.open(url, "_blank", "noopener");
+                    openProviderTab(`county-${select.value}`, url);
+                    moveCloseTabsBtnToCard(countyGoManualBtn.closest(".card-line"));
                 }
             }
             return;
@@ -2532,9 +2598,10 @@
             const provider = allSiteProviders[siteId];
             if (provider && provider.buildUrl) {
                 const url = provider.buildUrl(address, coords);
-                window.open(url, "_blank", "noopener");
+                openProviderTab(`site-${siteId}`, url);
             }
         });
+        moveCloseTabsBtnToCard(card);
 
         // Run enabled API providers
         if (settings.apis.includes("usps-api") && uspsSlab) {
@@ -2676,6 +2743,7 @@
         const cardId = deleteBtn.dataset.cardId;
         const card = document.getElementById(cardId);
         if (card) {
+            if (card.contains(closeTabsBtn)) homeCloseTabsBtn();
             card.style.transition = 'opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease, margin 0.3s ease, padding 0.3s ease';
             card.style.opacity = '0';
             card.style.transform = 'translateX(30px)';
